@@ -3,9 +3,13 @@ import { pool } from "../database/db.js";
 
 export const isAuthenticated = async (req, res, next) => {
   try {
+    //jwt scret check
+  
     const authHeader = req.headers.authorization;
-
+    console.log("Authorization header:", authHeader);
+    
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+     
       return res.status(401).json({
         success: false,
         message: "Access token is missing or invalid",
@@ -13,11 +17,15 @@ export const isAuthenticated = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+    console.log("Extracted token:", token);
 
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.SECRET_KEY);
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("Decoded token:", decoded);
+    
     } catch (err) {
+     
       if (err.name === "TokenExpiredError") {
         return res.status(401).json({
           success: false,
