@@ -1,0 +1,145 @@
+===============================
+UI COLOR & BACKGROUND NOTES
+===============================
+
+🌍 BACKGROUND LAYERS
+-------------------------------
+
+bg-background
+→ Main application background
+→ Lowest layer
+→ Used for page/body
+
+bg-muted
+→ Secondary section background
+→ Slight contrast from main background
+→ Used for wrappers, sections, empty areas
+
+bg-card
+→ Card/panel background
+→ Main content container
+→ Used for cards, tables, widgets
+
+bg-popover
+→ Floating highest layer
+→ Used for modal, dropdown, tooltip
+
+bg-sidebar
+→ Sidebar background
+→ Separate navigation area
+
+
+🎨 ACTION COLORS
+-------------------------------
+
+bg-primary
+→ Main action color
+→ Used for buttons, active items
+
+bg-accent
+→ Hover/select background
+→ Used for active nav, hover states
+
+bg-destructive
+→ Danger/warning actions
+→ Used for delete/disconnect
+
+
+🧱 BORDER COLORS
+-------------------------------
+
+border-border
+→ Default border color
+
+border-sidebar-border
+→ Sidebar specific border
+
+
+📝 TEXT COLORS
+-------------------------------
+
+text-foreground
+→ Main text color
+→ Headings & important text
+
+text-muted-foreground
+→ Secondary/helper text
+→ Description, metadata, placeholders
+
+text-primary-foreground
+→ Text inside primary buttons
+
+text-accent-foreground
+→ Text inside accent background
+
+text-card-foreground
+→ Text inside cards
+
+text-sidebar-foreground
+→ Sidebar text
+
+
+📦 RECOMMENDED UI STRUCTURE
+-------------------------------
+
+Page
+→ bg-background
+
+Sidebar
+→ bg-sidebar
+
+Content Section
+→ bg-muted
+
+Cards
+→ bg-card border-border
+
+Primary Button
+→ bg-primary text-primary-foreground
+
+Hover State
+→ bg-accent text-accent-foreground
+
+
+✨ PREMIUM UI RULE
+-------------------------------
+
+90% Neutral Colors
+→ background
+→ card
+→ muted
+
+10% Accent Colors
+→ primary
+→ destructive
+
+Use color mainly for:
+✔ actions
+✔ active states
+✔ alerts
+✔ focus
+
+
+🧠 TEXT HIERARCHY
+-------------------------------
+
+Most Important
+→ text-foreground
+
+Medium Importance
+→ text-foreground/70
+
+Least Important
+→ text-muted-foreground
+
+
+ SIMPLE DEPTH SYSTEM
+-------------------------------
+
+background
+   ↓
+muted section
+   ↓
+card
+   ↓
+popover/modal
