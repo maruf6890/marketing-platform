@@ -1,0 +1,7 @@
+// next kaj - pageid in fronend , make editor ready for the workflow
+// calender view for scheduled post, and a section for draft post, and a section for published post
+//next kaj- intrigate gemeni api for tag post descriotion and tag genration  with fast api
+//polish ui and other things connect everything together and test the workflow
+//fetch posts from facebook get comments from facebook
+//prepare an analytics for facebook
+//polish the app, make landing page better for these project 
