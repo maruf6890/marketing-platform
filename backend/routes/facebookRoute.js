@@ -3,7 +3,9 @@ import { isAuthenticated } from "../middleware/isAuthenticated.js"
 import {
   reqUsersPageList,
   getUsersPageList,
-  createPost
+  createPost,
+  getDraftsPosts,
+  getScheduledPosts
 } from "../controllers/facebookController.js";
 
 
@@ -11,6 +13,8 @@ const router = express.Router()
 router.get("/request_pages", isAuthenticated, reqUsersPageList);
 router.get("/page_list", isAuthenticated, getUsersPageList);
 router.post("/create_post", isAuthenticated, createPost);
+router.get("/drafts", isAuthenticated, getDraftsPosts);
+router.get("/scheduled_posts", isAuthenticated, getScheduledPosts);
 export default router
 
 

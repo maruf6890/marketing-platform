@@ -2,6 +2,7 @@ import express from "express"
 import 'dotenv/config'
 import userRoute from "./routes/userRoute.js"
 import facebookRoute from "./routes/facebookRoute.js";
+import instagramRoute from "./routes/instagramRoute.js";
 import {
   uploadSingleFile,
   uploadMultiple,
@@ -21,6 +22,7 @@ app.use(
 );
 app.use('/user', userRoute)
 app.use('/facebook', facebookRoute)
+app.use('/instagram', instagramRoute)
 app.post("/upload", upload.single("file"), uploadSingleFile);
 app.post("/upload-multiple", upload.array("files", 10), uploadMultiple);
 app.get("/", (req, res) => {

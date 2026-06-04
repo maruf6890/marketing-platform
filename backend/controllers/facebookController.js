@@ -289,4 +289,56 @@ export const createPost = async (req, res) => {
 
 }
 
+export const getDraftsPosts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [rows] = await pool.query(
+      `
+      SELECT p.id, p.content, p.scheduled_at, GROUP_CONCAT(m.url) AS media_urls
+      FROM posts p
+      LEFT JOIN media m ON p.id = m.post_id
+      WHERE p.user_id = ? AND p.status = 'draft'
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      `,
+      [userId],
+    );
+    return res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
 
+export const getScheduledPosts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [rows] = await pool.query(
+      `
+      SELECT p.id, p.content, p.scheduled_at, GROUP_CONCAT(m.url) AS media_urls
+      FROM posts p
+      LEFT JOIN media m ON p.id = m.post_id
+      WHERE p.user_id = ? AND p.status = 'scheduled'
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+      `,
+      [userId],
+    );
+    return res.status(200).json({
+      success: true,
+      data: rows,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}

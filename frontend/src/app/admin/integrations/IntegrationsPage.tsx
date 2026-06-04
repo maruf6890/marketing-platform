@@ -4,10 +4,9 @@ import { Facebook, Link2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { private_api_call } from "@/actions/parivate_api_calll";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { PlatformAccount } from "./action";
-import { da } from "date-fns/locale";
 
 
 export default function IntegrationsPage({data}: {data: Record<string,  PlatformAccount >}) {
@@ -110,7 +109,7 @@ export default function IntegrationsPage({data}: {data: Record<string,  Platform
             <div className="rounded-lg bg-muted p-2 text-muted-foreground">
               <Link2 />
             </div>
-            <h2 className="font-semibold">Instagram</h2>
+            <h2 className="font-semibold">Youtube</h2>
           </div>
           <p className="text-sm text-muted-foreground">Coming soon</p>
         </div>

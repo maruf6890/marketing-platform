@@ -1,21 +1,19 @@
-
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
-import { FaFacebookF } from "react-icons/fa";
+import { FaInstagram } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-
 import ImageEditor from "@/components/ImageEditor";
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { uploadMultipleFiles } from "@/actions/upload_files";
-import Image from "next/image";
 
-interface FacebookPageProps {
+interface InstagramPageProps {
   name: string;
   url: string;
 }
@@ -27,7 +25,7 @@ interface ImageType {
 }
 
 interface ComposerCardProps {
-  page?: FacebookPageProps;
+  page?: InstagramPageProps;
   message: string;
   setMessage: React.Dispatch<React.SetStateAction<string>>;
   selectedTags: string[];
@@ -36,15 +34,10 @@ interface ComposerCardProps {
 
 interface MediaSectionProps {
   images: ImageType[];
-  fileRef: React.RefObject<HTMLInputElement>;
-  handleImageUpload: (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => void;
+  fileRef: React.RefObject<HTMLInputElement | null>;
+  handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeImage: (id: string) => void;
-  setEditingImage: React.Dispatch<
-    React.SetStateAction<ImageType | null>
-  >;
-  
+  setEditingImage: React.Dispatch<React.SetStateAction<ImageType | null>>;
 }
 
 const DEFAULT_TAGS = [
@@ -62,33 +55,26 @@ const DEFAULT_TAGS = [
   "#Engagement",
 ];
 
-export default function FBPostComposer({
+export default function IGPostComposer({
   page,
 }: {
-  page?: FacebookPageProps;
+  page?: InstagramPageProps;
 }) {
   const [message, setMessage] = useState("");
   const [images, setImages] = useState<ImageType[]>([]);
-  const [editingImage, setEditingImage] =
-    useState<ImageType | null>(null);
+  const [editingImage, setEditingImage] = useState<ImageType | null>(null);
   const [openEditor, setOpenEditor] = useState(false);
 
-  const [selectedTags, setSelectedTags] = useState<
-    string[]
-  >([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [aiTags, setAiTags] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const [postStatus, setPostStatus] = useState<
-    "publishing" | "success" | null
-  >(null);
+  const [postStatus, setPostStatus] = useState<"publishing" | "success" | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
     const uploaded = files.map((file) => ({
@@ -107,18 +93,12 @@ export default function FBPostComposer({
   };
 
   const removeImage = (id: string) => {
-    setImages((prev) =>
-      prev.filter((img) => img.id !== id),
-    );
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
-
-  
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag)
-        ? prev.filter((t) => t !== tag)
-        : [...prev, tag],
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -140,11 +120,7 @@ export default function FBPostComposer({
 
       const data = await res.json();
 
-      setAiTags(
-        Array.isArray(data)
-          ? data
-          : DEFAULT_TAGS.slice(0, 8),
-      );
+      setAiTags(Array.isArray(data) ? data : DEFAULT_TAGS.slice(0, 8));
     } catch {
       setAiTags(DEFAULT_TAGS.slice(0, 8));
     }
@@ -152,32 +128,27 @@ export default function FBPostComposer({
     setAiLoading(false);
   };
 
-  const handlePost = async() => {
+  const handlePost = async () => {
     let imagesUrl = null;
-    if(images.length > 0) {
-      const res = await uploadMultipleFiles(
-        images.map((img) => img.file),
-      );
+    if (images.length > 0) {
+      const res = await uploadMultipleFiles(images.map((img) => img.file));
       console.log(res);
       imagesUrl = res.data;
     }
     //req with message, images,tags to backend
     const payload = {
-      pageId: 1, // check before doing ****
+      pageId: 3,
       message: message,
       tags: selectedTags,
       images: imagesUrl,
       status: "publishable",
     };
     const resPost = await private_api_call({
-      path: "facebook/create_post",
+      path: "instagram/create_post",
       method: "POST",
       body: payload,
     });
     console.log(resPost);
-
-    
-    
 
     setTimeout(() => {
       setPostStatus("success");
@@ -188,21 +159,13 @@ export default function FBPostComposer({
     }, 1200);
   };
 
+  const displayTags = aiTags.length ? aiTags : DEFAULT_TAGS;
 
-
-  const displayTags = aiTags.length
-    ? aiTags
-    : DEFAULT_TAGS;
-
-  const fullPost =
-    message +
-    (selectedTags.length
-      ? "\n\n" + selectedTags.join(" ")
-      : "");
+  const fullPost = message + (selectedTags.length ? "\n\n" + selectedTags.join(" ") : "");
 
   return (
     <>
-      <div className="bg-background min-h-screen">
+      <div className="bg-background">
         <div className="bg-muted p-4 lg:p-6">
           <div className="grid grid-cols-12 gap-6">
             {/* LEFT */}
@@ -236,7 +199,7 @@ export default function FBPostComposer({
                 <Button
                   disabled={!message.trim()}
                   onClick={handlePost}
-                  className="flex-[2] h-11 rounded-xl"
+                  className="flex-2 h-11 rounded-xl"
                 >
                   {postStatus === "publishing"
                     ? "Publishing..."
@@ -355,10 +318,10 @@ export default function FBPostComposer({
             prev.map((img) =>
               img.id === editingImage.id
                 ? {
-                    ...img,
-                    file: editedFile,
-                    preview,
-                  }
+                  ...img,
+                  file: editedFile,
+                  preview,
+                }
                 : img,
             ),
           );
@@ -375,13 +338,11 @@ function ComposerHeader() {
   return (
     <header className="flex items-center gap-3">
       <div className="bg-card border border-border h-11 w-11 rounded-xl flex items-center justify-center">
-        <FaFacebookF className="size-5 text-blue-600" />
+        <FaInstagram className="size-5 text-pink-500" />
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          Post Composer
-        </h1>
+        <h1 className="text-2xl font-bold text-foreground">Post Composer</h1>
 
         <p className="text-sm text-muted-foreground">
           Create · Schedule · Publish
@@ -402,42 +363,33 @@ function ComposerCard({
     <section className="bg-card border border-border rounded-2xl p-5 space-y-4">
       <div className="flex items-center gap-3">
         <div className="bg-primary text-primary-foreground h-12 w-12 rounded-xl flex items-center justify-center font-bold">
-          F
+          IG
         </div>
 
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-foreground">
-            {page?.name || "Your Facebook Page"}
+            {page?.name || "Your Instagram Account"}
           </h2>
 
           <p className="text-sm text-muted-foreground">
-            {page?.url ||
-              "facebook.com/yourpage"}
+            {page?.url || "instagram.com/yourprofile"}
           </p>
         </div>
 
-        <Badge variant="secondary">
-          Public
-        </Badge>
+        <Badge variant="secondary">Public</Badge>
       </div>
 
       <Textarea
         placeholder="What's on your mind?"
         value={message}
-        onChange={(e) =>
-          setMessage(e.target.value)
-        }
-        className="min-h-[140px] resize-none rounded-xl"
+        onChange={(e) => setMessage(e.target.value)}
+        className="min-h-35 resize-none rounded-xl"
       />
 
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">
-          Add tags to boost reach
-        </span>
+        <span className="text-muted-foreground">Add tags to boost reach</span>
 
-        <span className="text-muted-foreground">
-          {message.length} chars
-        </span>
+        <span className="text-muted-foreground">{message.length} chars</span>
       </div>
 
       {selectedTags.length > 0 && (
@@ -448,9 +400,7 @@ function ComposerCard({
               size="sm"
               variant="secondary"
               className="rounded-full"
-              onClick={() =>
-                toggleTag(tag)
-              }
+              onClick={() => toggleTag(tag)}
             >
               {tag}
             </Button>
@@ -467,14 +417,11 @@ function MediaSection({
   handleImageUpload,
   removeImage,
   setEditingImage,
-  getFilter,
 }: MediaSectionProps) {
   return (
     <section className="bg-card border border-border rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-foreground">
-          Media
-        </h3>
+        <h3 className="font-semibold text-foreground">Media</h3>
 
         <span className="text-sm text-muted-foreground">
           {images.length}/10
@@ -496,9 +443,7 @@ function MediaSection({
           transition
         "
       >
-        <p className="text-muted-foreground">
-          ⊕ Add photos & videos
-        </p>
+        <p className="text-red-500">⊕ Add photos & videos must</p>
       </button>
 
       <input
@@ -524,25 +469,17 @@ function MediaSection({
                 height={100}
                 width={100}
                 className="h-full w-full object-cover"
-                
               />
 
               <div className="absolute bottom-2 right-2 flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    setEditingImage(img)
-                  }
-                >
+                <Button size="sm" onClick={() => setEditingImage(img)}>
                   Edit
                 </Button>
 
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() =>
-                    removeImage(img.id)
-                  }
+                  onClick={() => removeImage(img.id)}
                 >
                   Remove
                 </Button>
@@ -555,25 +492,12 @@ function MediaSection({
   );
 }
 
-function SummaryRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function SummaryRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">
-        {label}
-      </span>
+      <span className="text-muted-foreground">{label}</span>
 
-      <span className="font-medium text-foreground">
-        {value}
-      </span>
+      <span className="font-medium text-foreground">{value}</span>
     </div>
   );
 }
-
-
-

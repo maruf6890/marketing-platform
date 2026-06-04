@@ -58,8 +58,8 @@ const data = {
   navMain: [
     {
       title: "Compose",
-      url: "#",
-      icon:Pen,
+      url: "/admin/compose",
+      icon: Pen,
       isActive: true,
       items: [
         {
@@ -70,30 +70,30 @@ const data = {
           title: "Instagram Post",
           url: "/admin/compose/instagram",
         }
-       
+
       ],
     },
-     {
+    {
       title: "Events",
       url: "/admin/events",
       icon: Calendar,
       isActive: true,
       children: undefined,
     },
-     {
-  title: "Scheduled Posts",
-  url: "/admin/scheduled-posts",
-  icon: CalendarClock,
-    isActive: true,
-  children: undefined,
-},
-{
-  title: "Drafts",
-  url: "/admin/drafts",
-  icon: FileText,
-  isActive: true,
-  children: undefined,
-},
+    {
+      title: "Scheduled Posts",
+      url: "/admin/scheduled_posts",
+      icon: CalendarClock,
+      isActive: true,
+      children: undefined,
+    },
+    {
+      title: "Drafts",
+      url: "/admin/drafts",
+      icon: FileText,
+      isActive: true,
+      children: undefined,
+    },
     {
       title: "Analytics",
       url: "#",
@@ -116,15 +116,22 @@ const data = {
       items: [
         {
           title: "Account Integrations",
-          url: "/admin/integrations/facebook-pages",
+          url: "/admin/integrations",
         },
+      ],
+    },
+    {
+      title: "Platform Settings",
+      url: "/admin/platform",
+      icon: FileText,
+      items: [
         {
           title: "Facebook Pages",
-          url: "/admin/integrations/facebook-pages",
+          url: "/admin/platform/facebook_pages",
         },
         {
           title: "Instagram Accounts",
-          url: "/admin/integrations/instagram-accounts",
+          url: "/admin/platform/instagram_accounts",
         }
       ],
     },
