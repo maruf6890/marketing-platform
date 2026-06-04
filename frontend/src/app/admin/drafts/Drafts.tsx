@@ -2,7 +2,17 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
@@ -11,11 +21,65 @@ type Draft = {
     id: string | number;
     content?: string;
     media_urls?: string;
+    scheduled_at?: string;
 };
 
 export default function DraftsPage() {
     const [pages, setPages] = useState<Draft[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null);
+    const [editContent, setEditContent] = useState("");
+    const [editScheduledAt, setEditScheduledAt] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+
+    const openEditModal = (draft: Draft) => {
+        setSelectedDraft(draft);
+        setEditContent(draft.content || "");
+        setEditScheduledAt(draft.scheduled_at || "");
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setSelectedDraft(null);
+        setEditContent("");
+        setEditScheduledAt("");
+    };
+
+    const handleSaveDraft = async () => {
+        if (!selectedDraft) return;
+
+        try {
+            setIsSaving(true);
+            const response = await private_api_call({
+                path: `facebook/drafts/${selectedDraft.id}`,
+                method: "PUT",
+                body: {
+                    content: editContent,
+                    scheduled_at: editScheduledAt || null,
+                },
+            });
+
+            if (response.success) {
+                toast.success("Draft updated successfully!");
+                // Update the draft in the list
+                setPages(pages.map(p =>
+                    p.id === selectedDraft.id
+                        ? { ...p, content: editContent, scheduled_at: editScheduledAt }
+                        : p
+                ));
+                closeModal();
+            } else {
+                toast.error(response.message || "Failed to update draft");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update draft");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const fetchDrafts = async () => {
         try {
@@ -125,7 +189,11 @@ export default function DraftsPage() {
 
                             {/* Action Buttons */}
                             <div className="flex gap-2 justify-end">
-                                <Button variant="outline" size="sm">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openEditModal(draft)}
+                                >
                                     Edit
                                 </Button>
                                 <Button variant="outline" size="sm" className="text-destructive">
@@ -139,6 +207,59 @@ export default function DraftsPage() {
                     </div>
                 ))}
             </div>
+
+            {/* Edit Modal */}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit Draft</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Content */}
+                        <div className="space-y-2">
+                            <Label htmlFor="content">Content</Label>
+                            <Textarea
+                                id="content"
+                                placeholder="Enter post content..."
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                className="min-h-30 resize-none"
+                                disabled
+                            />
+                        </div>
+
+                        {/* Scheduled Date */}
+                        <div className="space-y-2">
+                            <Label htmlFor="scheduled-at">
+                                Schedule (Optional)
+                            </Label>
+                            <Input
+                                id="scheduled-at"
+                                type="datetime-local"
+                                value={editScheduledAt}
+                                onChange={(e) => setEditScheduledAt(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={closeModal}
+                            disabled={isSaving}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSaveDraft}
+                            disabled={isSaving || !editContent.trim()}
+                        >
+                            {isSaving ? "Saving..." : "Save Changes"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

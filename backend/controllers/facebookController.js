@@ -316,6 +316,40 @@ export const getDraftsPosts = async (req, res) => {
   }
 }
 
+export const editDraftOrScheduledPost = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
+    const { content, scheduled_at } = req.body;
+    // Check if post exists and belongs to user
+    const [postRows] = await pool.query(
+      `SELECT id FROM posts WHERE id = ? AND user_id = ? AND status IN ('draft', 'scheduled')`,
+      [postId, userId],
+    );
+    if (postRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found",
+      });
+    }
+    // Update post content and scheduled_at
+    await pool.query(
+      `UPDATE posts SET content = ?, scheduled_at = ? WHERE id = ?`,
+      [content, scheduled_at, postId],
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Post updated successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+}
+
 export const getScheduledPosts = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -339,6 +373,119 @@ export const getScheduledPosts = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+}
+
+export const loadFacebookFeed = async (userId) => {
+  try {
+    // Get all user's Facebook pages with access tokens
+    const [pages] = await pool.query(
+      `
+      SELECT id, asset_id, name, access_token
+      FROM user_platform_assets
+      WHERE account_id IN (
+        SELECT id FROM user_platform_accounts
+        WHERE user_id = ?
+      )
+      AND type = 'facebook_page'
+      `,
+      [userId]
+    );
+
+    let allPosts = [];
+
+    // Fetch posts from each page
+    for (const page of pages) {
+      try {
+        const response = await axios.get(
+          `https://graph.facebook.com/v25.0/${page.asset_id}/feed`,
+          {
+            params: {
+              access_token: page.access_token,
+              fields: 'id,message,full_picture,created_time,status_type,permalink_url',
+              limit: 50,
+            },
+          }
+        );
+
+        // Add page info to posts
+        const postsWithPageInfo = response.data.data.map(post => ({
+          ...post,
+          page_id: page.id,
+          page_name: page.name,
+          page_asset_id: page.asset_id,
+          access_token: page.access_token,
+        }));
+
+        allPosts = allPosts.concat(postsWithPageInfo);
+      } catch (error) {
+        console.error(`Error fetching posts from page ${page.name}:`, error.response?.data || error);
+      }
+    }
+
+    // Sort by created_time descending
+    allPosts.sort((a, b) => new Date(b.created_time) - new Date(a.created_time));
+
+    return allPosts;
+  } catch (error) {
+    console.error('Error loading Facebook feed:', error);
+    throw error;
+  }
+}
+
+export const getFacebookFeed = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const posts = await loadFacebookFeed(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: posts,
+      message: "Facebook feed loaded successfully",
+    });
+  } catch (error) {
+    console.error('Error getting Facebook feed:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load Facebook feed",
+    });
+  }
+}
+
+export const getPostComments = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Access token is required",
+      });
+    }
+
+    const response = await axios.get(
+      `https://graph.facebook.com/v25.0/${postId}/comments`,
+      {
+        params: {
+          access_token: accessToken,
+          fields: 'id,message,created_time,from.fields(id,name,picture)',
+          limit: 100,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: response.data.data,
+      message: "Comments loaded successfully",
+    });
+  } catch (error) {
+    console.error('Error fetching post comments:', error.response?.data || error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load comments",
     });
   }
 }
