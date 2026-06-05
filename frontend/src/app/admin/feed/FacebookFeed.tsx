@@ -16,7 +16,7 @@ import { toast } from "sonner";
 type Post = {
     id: string;
     message?: string;
-    full_picture?: string;
+    images?: string[];
     created_time: string;
     page_name: string;
     page_asset_id: string;
@@ -25,6 +25,26 @@ type Post = {
 };
 
 type Comment = {
+    id: string;
+    message: string;
+    created_time: string;
+    from: {
+        id: string;
+        name: string;
+        picture?: {
+            data: {
+                height: number;
+                width: number;
+                url: string;
+            };
+        };
+    };
+    comments?: {
+        data: Reply[];
+    };
+};
+
+type Reply = {
     id: string;
     message: string;
     created_time: string;
@@ -164,24 +184,34 @@ export default function FacebookFeedPage() {
                             {/* Post Content */}
                             {(post.message) && (
                                 <div className="bg-muted/50 rounded p-3">
-                                    <p className="text-sm whitespace-pre-wrap break-words">
+                                    <p className="text-sm whitespace-pre-wrap wrap-break-word">
                                         {post.message}
                                     </p>
                                 </div>
                             )}
 
                             {/* Image Preview */}
-                            {post.full_picture && (
-                                <div className="relative w-full max-h-96 rounded-md overflow-hidden bg-muted">
-                                    <img
-                                        src={post.full_picture}
-                                        alt="Post"
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.src =
-                                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='%236b7280' text-anchor='middle' dy='.3em'%3EImage Error%3C/text%3E%3C/svg%3E";
-                                        }}
-                                    />
+                            {((post.images && post.images.length > 0)) && (
+                                <div className="grid gap-2">
+                                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                        {(post.images && post.images.length > 0
+                                            ? post.images : []).map((image, idx) => (
+                                            <div
+                                                key={`${post.id}-image-${idx}`}
+                                                className="relative w-full overflow-hidden rounded-md bg-muted"
+                                            >
+                                                <img
+                                                    src={image}
+                                                    alt={`Post image ${idx + 1}`}
+                                                    className="h-40 w-full object-cover sm:h-48"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src =
+                                                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='%236b7280' text-anchor='middle' dy='.3em'%3EImage Error%3C/text%3E%3C/svg%3E";
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
@@ -263,6 +293,34 @@ export default function FacebookFeedPage() {
                                         <p className="text-sm whitespace-pre-wrap wrap-break-word">
                                             {comment.message}
                                         </p>
+                                        {comment.comments?.data && comment.comments.data.length > 0 && (
+                                            <div className="mt-3 space-y-3 border-l pl-4">
+                                                {comment.comments.data.map((reply) => (
+                                                    <div key={reply.id} className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            {reply.from.picture?.data?.url && (
+                                                                <img
+                                                                    src={reply.from.picture.data.url}
+                                                                    alt={reply.from.name}
+                                                                    className="w-6 h-6 rounded-full"
+                                                                />
+                                                            )}
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium">
+                                                                    {reply.from.name}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {formatDate(reply.created_time)}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-sm whitespace-pre-wrap wrap-break-word">
+                                                            {reply.message}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

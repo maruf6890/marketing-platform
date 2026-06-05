@@ -403,20 +403,53 @@ export const loadFacebookFeed = async (userId) => {
           {
             params: {
               access_token: page.access_token,
-              fields: 'id,message,full_picture,created_time,status_type,permalink_url',
+              fields: 'id,message,created_time,status_type,permalink_url,attachments{media,type,subattachments{media}}',
               limit: 50,
             },
           }
         );
 
-        // Add page info to posts
-        const postsWithPageInfo = response.data.data.map(post => ({
-          ...post,
-          page_id: page.id,
-          page_name: page.name,
-          page_asset_id: page.asset_id,
-          access_token: page.access_token,
-        }));
+        // Add page info to posts and extract multiple images
+        const postsWithPageInfo = response.data.data.map(post => {
+          const images = [];
+          
+          // Extract images from attachments and subattachments
+          if (post.attachments && post.attachments.data && post.attachments.data.length > 0) {
+            for (const attachment of post.attachments.data) {
+              if (attachment.media && attachment.media.image && attachment.media.image.src) {
+                if (!images.includes(attachment.media.image.src)) {
+                  images.push(attachment.media.image.src);
+                }
+              }
+
+              if (attachment.subattachments && attachment.subattachments.data) {
+                // remove attachment media from images if exist in subattachments
+                if (attachment.media && attachment.media.image && attachment.media.image.src) {
+                  const index = images.indexOf(attachment.media.image.src);
+                  if (index > -1) {
+                    images.splice(index, 1);
+                  }
+                }
+                for (const subattachment of attachment.subattachments.data) {
+                  if (subattachment.media && subattachment.media.image && subattachment.media.image.src) {
+                    if (!images.includes(subattachment.media.image.src)) {
+                      images.push(subattachment.media.image.src);
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
+          return {
+            ...post,
+            page_id: page.id,
+            page_name: page.name,
+            page_asset_id: page.asset_id,
+            access_token: page.access_token,
+            images: images,
+          };
+        });
 
         allPosts = allPosts.concat(postsWithPageInfo);
       } catch (error) {
@@ -470,7 +503,7 @@ export const getPostComments = async (req, res) => {
       {
         params: {
           access_token: accessToken,
-          fields: 'id,message,created_time,from.fields(id,name,picture)',
+          fields: 'id,message,created_time,from.fields(id,name,picture),comments.limit(50){id,message,created_time,from.fields(id,name,picture)}',
           limit: 100,
         },
       }
@@ -489,3 +522,123 @@ export const getPostComments = async (req, res) => {
     });
   }
 }
+
+export const publishScheduledOrDraftPost = async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const userId = req.user.id;
+    const {
+      pageId,
+      postId,
+      message,
+      images,
+      tags,
+      scheduled_at = null,
+    } = req.body;
+
+    console.log("Creating post with data:", {
+      pageId,
+      postId,
+      message,
+      images,
+      tags,
+      scheduled_at,
+    });
+    const [rows] = await pool.query(
+      `
+      SELECT access_token,asset_id
+      FROM user_platform_assets WHERE id = ?
+      `,
+      [pageId],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "Page not found",
+      });
+    }
+    console.log("Retrieved page access token:", rows[0].access_token);
+
+    const pageAccessToken = rows[0]?.access_token;
+    const pageAssetId = rows[0]?.asset_id;
+
+    const publishImages = Array.isArray(images) ? images : [];
+
+    if (publishImages.length == 0) {
+      //send post request to facebook with text only
+      const postRes = await axios.post(
+        `https://graph.facebook.com/v25.0/${pageAssetId}/feed`,
+        {
+          message: message + " " + tags.map((tag) => `${tag}`).join(" "),
+          access_token: pageAccessToken,
+        },
+      );
+      console.log("Facebook API response for text-only post:", postRes.data);
+
+    } else {
+      if (publishImages.length === 1) {
+        //send post request to facebook with text and single image
+        const singleImageRes = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/photos`,
+          {
+            caption: message + " " + tags.map((tag) => `${tag}`).join(" "),
+            url: publishImages[0].url,
+            access_token: pageAccessToken,
+          },
+        );
+
+        console.log("Facebook API response for single image post:", singleImageRes.data);
+      } else {
+        //send post request to facebook with text and multiple images
+        const mediaIds = [];
+        for (const image of publishImages) {
+          const mediaRes = await axios.post(
+            `https://graph.facebook.com/v25.0/${pageAssetId}/photos`,
+            {
+              url: image.url,
+              access_token: pageAccessToken,
+              published: false,
+            },
+          );
+          mediaIds.push(mediaRes.data.id);
+        }
+        const multipleImageRes = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/feed`,
+          {
+            message: message + " " + tags.map((tag) => `${tag}`).join(" "),
+            attached_media: mediaIds.map((id) => ({ media_fbid: id })),
+            access_token: pageAccessToken,
+          },
+        );
+
+        console.log("Facebook API response for multiple image post:", multipleImageRes.data);
+      }
+    }
+    //update post status to published
+    await connection.query(
+      `
+        UPDATE posts
+        SET status = 'published', published_at = NOW()
+        WHERE id = ?
+        `,
+      [postId],
+    );
+
+    return res.status(200).json({
+      message: "Post created and published successfully",
+      success: true,
+    });
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    console.error(error.response?.data || error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  } finally {
+    await connection.release();
+  }
+}
+    

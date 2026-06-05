@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Facebook } from "lucide-react";
@@ -12,6 +13,7 @@ import { Elsie_Swash_Caps } from "next/font/google";
 
 
 export default function PagesListPage({data}: {data:Asset[] | null}) {
+  const router = useRouter();
   const [pages, setPages] = useState<Asset[]>(data || []);
   const [loading, setLoading] = useState(false);
 
@@ -96,7 +98,7 @@ export default function PagesListPage({data}: {data:Asset[] | null}) {
 
             {/* Right actions */}
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" onClick={() => router.push("/admin/feed")}>
                 View
               </Button>
               <Button size="sm">Post</Button>

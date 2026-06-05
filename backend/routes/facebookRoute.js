@@ -4,6 +4,7 @@ import {
   reqUsersPageList,
   getUsersPageList,
   createPost,
+  publishScheduledOrDraftPost,
   getDraftsPosts,
   getScheduledPosts,
   editDraftOrScheduledPost,
@@ -16,6 +17,7 @@ const router = express.Router()
 router.get("/request_pages", isAuthenticated, reqUsersPageList);
 router.get("/page_list", isAuthenticated, getUsersPageList);
 router.post("/create_post", isAuthenticated, createPost);
+router.post("/publish_post", isAuthenticated, publishScheduledOrDraftPost);
 router.get("/drafts", isAuthenticated, getDraftsPosts);
 router.put("/drafts/:postId", isAuthenticated, editDraftOrScheduledPost);
 router.get("/scheduled_posts", isAuthenticated, getScheduledPosts);

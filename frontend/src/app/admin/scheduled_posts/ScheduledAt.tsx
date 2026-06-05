@@ -13,6 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
@@ -24,6 +25,13 @@ type Scheduled = {
     scheduled_at?: string;
 };
 
+type Page = {
+    id: number;
+    asset_id: string;
+    name: string;
+    type: string;
+};
+
 export default function ScheduledPage() {
     const [pages, setPages] = useState<Scheduled[]>([]);
     const [loading, setLoading] = useState(false);
@@ -32,6 +40,11 @@ export default function ScheduledPage() {
     const [editContent, setEditContent] = useState("");
     const [editScheduledAt, setEditScheduledAt] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const [pagesList, setPagesList] = useState<Page[]>([]);
+    const [selectedPageId, setSelectedPageId] = useState("");
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [loadingPages, setLoadingPages] = useState(false);
 
     const openEditModal = (scheduled: Scheduled) => {
         setSelectedScheduled(scheduled);
@@ -45,6 +58,37 @@ export default function ScheduledPage() {
         setSelectedScheduled(null);
         setEditContent("");
         setEditScheduledAt("");
+    };
+
+    const openPublishModal = async (scheduled: Scheduled) => {
+        setSelectedScheduled(scheduled);
+        setIsPublishModalOpen(true);
+
+        if (pagesList.length > 0) return;
+
+        try {
+            setLoadingPages(true);
+            const response = await private_api_call({
+                path: "facebook/page_list",
+                method: "GET",
+            });
+
+            if (response.success) {
+                setPagesList(response.data || []);
+            } else {
+                toast.error(response.message || "Failed to load pages");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to load pages");
+        } finally {
+            setLoadingPages(false);
+        }
+    };
+
+    const closePublishModal = () => {
+        setIsPublishModalOpen(false);
+        setSelectedPageId("");
     };
 
     const handleSaveScheduled = async () => {
@@ -104,6 +148,47 @@ export default function ScheduledPage() {
             toast.error("Failed to fetch Facebook scheduled posts.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handlePublishScheduled = async () => {
+        if (!selectedScheduled || !selectedPageId) return;
+
+        try {
+            setIsPublishing(true);
+
+            const imageUrls = selectedScheduled.media_urls
+                ? selectedScheduled.media_urls
+                    .split(",")
+                    .map((url) => url.trim())
+                    .filter(Boolean)
+                : [];
+
+            const response = await private_api_call({
+                path: "facebook/publish_post",
+                method: "POST",
+                body: {
+                    pageId: Number(selectedPageId),
+                    postId: selectedScheduled.id,
+                    message: selectedScheduled.content || "",
+                    images: imageUrls.map((url) => ({ url })),
+                    tags: [],
+                    scheduled_at: selectedScheduled.scheduled_at || null,
+                },
+            });
+
+            if (response.success) {
+                toast.success("Scheduled post published successfully!");
+                setPages((prev) => prev.filter((item) => item.id !== selectedScheduled.id));
+                closePublishModal();
+            } else {
+                toast.error(response.message || "Failed to publish scheduled post");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to publish scheduled post");
+        } finally {
+            setIsPublishing(false);
         }
     };
 
@@ -199,7 +284,7 @@ export default function ScheduledPage() {
                                 <Button variant="outline" size="sm" className="text-destructive">
                                     Delete
                                 </Button>
-                                <Button size="sm">
+                                <Button size="sm" onClick={() => openPublishModal(scheduled)}>
                                     Publish
                                 </Button>
                             </div>
@@ -256,6 +341,52 @@ export default function ScheduledPage() {
                             disabled={isSaving || !editContent.trim()}
                         >
                             {isSaving ? "Saving..." : "Save Changes"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Publish Modal */}
+            <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Publish Scheduled Post</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="page">Select Page</Label>
+                            <DefaultSelect
+                                value={selectedPageId}
+                                onValueChange={setSelectedPageId}
+                                options={pagesList.map((page) => ({
+                                    label: page.name,
+                                    value: String(page.id),
+                                }))}
+                                placeholder={loadingPages ? "Loading pages..." : "Choose a page"}
+                                className="w-full"
+                            />
+                            {loadingPages && (
+                                <p className="text-xs text-muted-foreground">
+                                    Loading pages...
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={closePublishModal}
+                            disabled={isPublishing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handlePublishScheduled}
+                            disabled={isPublishing || !selectedPageId}
+                        >
+                            {isPublishing ? "Publishing..." : "Publish"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
