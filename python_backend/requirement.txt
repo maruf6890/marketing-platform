@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+langchain
+langchain-google-genai
+google-genai
+python-multipart
+pillow
+aiofiles
+pydantic
+httpx
+python-dotenv

@@ -121,9 +121,9 @@ export const getUsersPageList = async (req, res) => {
 
 
 export const createPost = async (req, res) => {
-  const connection = await pool.getConnection();
+
   try {
-  await connection.beginTransaction();
+
   const userId = req.user.id;
   const {
     pageId,
@@ -131,7 +131,7 @@ export const createPost = async (req, res) => {
     images,
     tags,
     status,
-    scheduled_at = null,
+    scheduled_at ,
   } = req.body;
 
   console.log("Creating post with data:", {
@@ -149,7 +149,7 @@ export const createPost = async (req, res) => {
     `,
     [pageId],
   );
-  if (rows.length === 0) {
+    if (rows.length === 0) {
     return res.status(404).json({
       message: "Page not found",
     });
@@ -163,7 +163,7 @@ export const createPost = async (req, res) => {
 
   //save posts
   //insert into posts (user_id,content_type,content,status,scheduled_at) value
- const [result] = await connection.query(
+ const [result] = await pool.query(
    `
   INSERT INTO posts (user_id, content_type, content, status, scheduled_at)
   VALUES (?, ?, ?, ?, ?)
@@ -188,7 +188,7 @@ export const createPost = async (req, res) => {
      "uploaded",
    ]);
 
-   const [mediaResult] = await connection.query(
+   const [mediaResult] = await pool.query(
      `
     INSERT INTO media (user_id, post_id, type, url, upload_status)
     VALUES ?
@@ -196,24 +196,26 @@ export const createPost = async (req, res) => {
      [mediaValues],
    );
    if (mediaResult.affectedRows === 0) {
+
      return res.status(500).json({
        success: false,
        message: "Failed to save media",
       });
    }
  }
-  if(status==="scheduled" || status === "draft"){
+    if (status === "scheduled" || status === "draft") {
     return res.status(200).json({
       message: "Post saved successfully",
       success: true,
     });
+    
   }
     if (status === "publishable") { 
    
     if (images.length == 0) {
       //send post request to facebook with text only
       const postRes = await axios.post(
-        `https://graph.facebook.com/v25.0/${pageId}/feed`,
+        `https://graph.facebook.com/v25.0/${pageAssetId}/feed`,
         {
           message: message + " " + tags.map((tag) => `${tag}`).join(" "),
           access_token: pageAccessToken,
@@ -261,7 +263,7 @@ export const createPost = async (req, res) => {
       }
     }
     //update post status to published
-    await connection.query(
+    await pool.query(
       `
       UPDATE posts
       SET status = 'published', published_at = NOW()
@@ -269,22 +271,19 @@ export const createPost = async (req, res) => {
       `,
       [postId],
     );
-
     return res.status(200).json({
       message: "Post created and published successfully",
       success: true,
     });
     }
-    await connection.commit();
+   
   } catch (error) {
-    await connection.rollback();
+
     console.error(error.response?.data || error);
     return res.status(500).json({
       message: "Internal server error",
       success: false,
     });
-  } finally {
-    await connection.release();
   }
 
 }

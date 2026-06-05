@@ -40,7 +40,7 @@ export default function Page({children}: {children: React.ReactNode }) {
             </Breadcrumb>
           </div>
         </header>
-        <div className="bg-muted h-screen">{children}</div>
+        <div className="bg-muted flex-1">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );
