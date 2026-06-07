@@ -2,11 +2,8 @@
 
 import {
   BadgeCheck,
-  Bell,
   ChevronsUpDown,
-  CreditCard,
   LogOut,
-  Sparkles,
 } from "lucide-react"
 
 import {
@@ -29,6 +26,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { useRouter } from "next/navigation"
+import { BASE_URL } from "@/lib/const"
+import { toast } from "sonner"
 
 export function NavUser({
   user,
@@ -40,6 +40,37 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+
+  const deleteClientCookie = (name: string) => {
+    try {
+      document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      // call backend logout (best-effort)
+      await fetch(`${BASE_URL}/user/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      })
+    } catch (err) {
+      console.error("Logout request failed", err)
+    }
+
+    // remove client-side cookies/localStorage used for auth
+    ["token", "user_name", "email", "user_id", "role"].forEach((k) => {
+      deleteClientCookie(k)
+      try { localStorage.removeItem(k) } catch {}
+    })
+
+    toast.success("Logged out")
+    router.push("/auth/login")
+  }
 
   return (
     <SidebarMenu>
@@ -81,13 +112,13 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/admin/account")}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>

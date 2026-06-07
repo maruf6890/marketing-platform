@@ -166,7 +166,20 @@ export const loginUser = async (req, res) => {
 
 export const logoutUser = async (req, res) => {
   try {
-    const userId = req.userId;
+    // Clear auth-related cookies set by the frontend/server
+    const cookieOptions = {
+      path: "/",
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    };
+
+    res.clearCookie("token", cookieOptions);
+    res.clearCookie("user_name", cookieOptions);
+    res.clearCookie("email", cookieOptions);
+    res.clearCookie("user_id", cookieOptions);
+    res.clearCookie("role", cookieOptions);
+
     return res.status(200).json({
       success: true,
       message: "Logged out successfully",
@@ -338,7 +351,26 @@ export const getUsersList = async (req, res) => {
 };
 
 export const getCurrentUser = async (req, res) => {
-  userId = req.userId;
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const [rows] = await pool.query("SELECT id, name,email,avatar_url FROM users WHERE id = ?", [
+      userId,
+    ]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const user = { ...rows[0] };
+
+    return res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 export const redirectFacebookLogin = (req, res) => {

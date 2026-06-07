@@ -2,27 +2,21 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
   Bot,
   Calendar,
   CalendarClock,
-  Command,
   FileText,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
+  // Frame,
+  // Map,
   Pen,
-  PieChart,
-  Settings2,
-  SquareTerminal,
+  // PieChart,
   Unplug,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
+// import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { private_api_call } from "@/actions/parivate_api_calll"
 import {
   Sidebar,
   SidebarContent,
@@ -31,30 +25,12 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "",
+    email: "",
     avatar: "/avatars/shadcn.jpg",
   },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
   navMain: [
     {
       title: "Compose",
@@ -136,26 +112,39 @@ const data = {
       ],
     },
   ],
-  projects: [
-    {
-      name: "Terms & Conditions",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Privacy Policy",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "About Platforms",
-      url: "#",
-      icon: Map,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [user, setUser] = React.useState(data.user)
+
+  React.useEffect(() => {
+    let isMounted = true
+
+    const loadCurrentUser = async () => {
+      const response = await private_api_call({
+        path: "user/get-current-user",
+        method: "GET",
+      })
+
+      if (!isMounted || !response.success || !response.data) {
+        return
+      }
+
+      const currentUser = response.data
+      setUser({
+        name: currentUser.name ?? "",
+        email: currentUser.email ?? "",
+        avatar: currentUser.avatar_url || "/avatars/shadcn.jpg",
+      })
+    }
+
+    void loadCurrentUser()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -164,10 +153,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
