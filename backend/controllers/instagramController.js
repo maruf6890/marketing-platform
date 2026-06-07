@@ -377,3 +377,165 @@ export const createPost = async (req, res) => {
     await connection.release();
   }
 }
+
+export const loadInstagramFeed = async (userId) => {
+  try {
+    const [accounts] = await pool.query(
+      `
+      SELECT id, asset_id, name, access_token
+      FROM user_platform_assets
+      WHERE account_id IN (
+        SELECT id
+        FROM user_platform_accounts
+        WHERE user_id = ?
+      )
+      AND type = 'instagram_account'
+      `,
+      [userId]
+    );
+
+    let allPosts = [];
+
+    for (const account of accounts) {
+      try {
+        const response = await axios.get(
+          `https://graph.facebook.com/v25.0/${account.asset_id}/media`,
+          {
+            params: {
+              access_token: account.access_token,
+              fields:
+                "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,children{media_type,media_url,thumbnail_url}",
+              limit: 50,
+            },
+          }
+        );
+
+        const posts = response.data.data.map((post) => {
+          const images = [];
+
+          // Single image
+          if (post.media_type === "IMAGE" && post.media_url) {
+            images.push(post.media_url);
+          }
+
+          // Carousel
+          if (
+            post.media_type === "CAROUSEL_ALBUM" &&
+            post.children?.data
+          ) {
+            for (const child of post.children.data) {
+              if (
+                ["IMAGE", "VIDEO"].includes(child.media_type) &&
+                child.media_url
+              ) {
+                images.push(child.media_url);
+              }
+            }
+          }
+
+          // Video cover image
+          if (
+            post.media_type === "VIDEO" &&
+            post.thumbnail_url
+          ) {
+            images.push(post.thumbnail_url);
+          }
+
+          return {
+            id: post.id,
+            caption: post.caption,
+            media_type: post.media_type,
+            media_url: post.media_url,
+            thumbnail_url: post.thumbnail_url,
+            permalink: post.permalink,
+            timestamp: post.timestamp,
+
+            page_id: account.id,
+            page_name: account.name,
+            page_asset_id: account.asset_id,
+            access_token: account.access_token,
+
+            images,
+          };
+        });
+
+        allPosts.push(...posts);
+      } catch (error) {
+        console.error(
+          `Error fetching Instagram posts from ${account.name}:`,
+          error.response?.data || error.message
+        );
+      }
+    }
+
+    allPosts.sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+
+    return allPosts;
+  } catch (error) {
+    console.error("Error loading Instagram feed:", error);
+    throw error;
+  }
+};
+
+export const getInstagramFeed = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const posts = await loadInstagramFeed(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: posts,
+      message: "Instagram feed loaded successfully",
+    });
+  } catch (error) {
+    console.error('Error getting Instagram feed:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load Instagram feed",
+    });
+  }
+}
+
+export const getInstagramPostComments = async (req, res) => { 
+  try {
+    const { mediaId } = req.params;
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Access token is required",
+      });
+    }
+
+    const response = await axios.get(
+      `https://graph.facebook.com/v25.0/${mediaId}/comments`,
+      {
+        params: {
+          access_token: accessToken,
+          fields:
+            "id,text,timestamp,username,replies{id,text,timestamp,username},like_count,from",
+          limit: 100,
+        },
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: response.data.data,
+      message: "Instagram comments loaded successfully",
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching Instagram comments:",
+      error.response?.data || error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load Instagram comments",
+    });
+  }
+};
