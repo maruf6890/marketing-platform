@@ -152,8 +152,8 @@ export const createPost = async (req, res) => {
     //insert into posts (user_id,content_type,content,status,scheduled_at) value
     const [result] = await pool.query(
       `
-  INSERT INTO posts (user_id, content_type, content, status, scheduled_at)
-  VALUES (?, ?, ?, ?, ?)
+  INSERT INTO posts (user_id, content_type, content, status, scheduled_at, platform_asset_id)
+  VALUES (?, ?, ?, ?, ?, ?)
   `,
       [
         userId,
@@ -161,6 +161,7 @@ export const createPost = async (req, res) => {
         message + " " + tags.map((tag) => `${tag}`).join(" "),
         status,
         scheduled_at && status === "scheduled" ? new Date(scheduled_at) : null,
+        pageId,
       ],
     );
     const postId = result.insertId;
@@ -279,9 +280,10 @@ export const getDraftsPosts = async (req, res) => {
     const userId = req.user.id;
     const [rows] = await pool.query(
       `
-      SELECT p.id, p.content, p.scheduled_at, GROUP_CONCAT(m.url) AS media_urls
+      SELECT p.id, p.content, p.scheduled_at, pa.name, pa.type, GROUP_CONCAT(m.url) AS media_urls
       FROM posts p
       LEFT JOIN media m ON p.id = m.post_id
+      LEFT JOIN user_platform_assets pa ON p.platform_asset_id = pa.id
       WHERE p.user_id = ? AND p.status = 'draft'
       GROUP BY p.id
       ORDER BY p.created_at DESC
@@ -301,48 +303,15 @@ export const getDraftsPosts = async (req, res) => {
   }
 };
 
-export const editDraftOrScheduledPost = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { postId } = req.params;
-    const { content, scheduled_at } = req.body;
-    // Check if post exists and belongs to user
-    const [postRows] = await pool.query(
-      `SELECT id FROM posts WHERE id = ? AND user_id = ? AND status IN ('draft', 'scheduled')`,
-      [postId, userId],
-    );
-    if (postRows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Post not found",
-      });
-    }
-    // Update post content and scheduled_at
-    await pool.query(
-      `UPDATE posts SET content = ?, scheduled_at = ? WHERE id = ?`,
-      [content, scheduled_at, postId],
-    );
-    return res.status(200).json({
-      success: true,
-      message: "Post updated successfully",
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
 export const getScheduledPosts = async (req, res) => {
   try {
     const userId = req.user.id;
     const [rows] = await pool.query(
       `
-      SELECT p.id, p.content, p.scheduled_at, GROUP_CONCAT(m.url) AS media_urls
+      SELECT p.id, p.content, p.scheduled_at, pa.name, pa.type, GROUP_CONCAT(m.url) AS media_urls
       FROM posts p
       LEFT JOIN media m ON p.id = m.post_id
+      LEFT JOIN user_platform_assets pa ON p.platform_asset_id = pa.id
       WHERE p.user_id = ? AND p.status = 'scheduled'
       GROUP BY p.id
       ORDER BY p.created_at DESC

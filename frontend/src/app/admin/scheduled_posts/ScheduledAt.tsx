@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Edit, Loader2, RefreshCw } from "lucide-react";
+import { Calendar, Edit, Facebook, Instagram, Loader2 } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -10,15 +10,12 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
 import { format } from "date-fns/format";
-import { shouldUseReactServerCondition } from "next/dist/build/utils";
 import Image from "next/image";
 import DeleteDialog from "@/components/app_ui_element/DeleteDialog";
 import { useRouter } from "next/navigation";
@@ -28,6 +25,8 @@ type Scheduled = {
     content?: string;
     media_urls?: string;
     scheduled_at?: string;
+    name?: string;
+    type?: string;
 };
 
 type Page = {
@@ -39,12 +38,7 @@ type Page = {
 
 export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
     const [pages, setPages] = useState<Scheduled[]>(posts);
-    const [loading, setLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedScheduled, setSelectedScheduled] = useState<Scheduled | null>(null);
-    const [editContent, setEditContent] = useState("");
-    const [editScheduledAt, setEditScheduledAt] = useState("");
-    const [isSaving, setIsSaving] = useState(false);
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [pagesList, setPagesList] = useState<Page[]>([]);
     const [selectedPageId, setSelectedPageId] = useState("");
@@ -54,25 +48,10 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
     const [deletingPostId, setDeletingPostId] = useState<string | number | null>(null);
     const [pendingDelete, setPendingDelete] = useState(false);
     const [redirectingPostId, setRedirectingPostId] = useState<string | number | null>(null);
-    const [publishingPostId, setPublishingPostId] = useState<string | number | null>(null);
     
-
-    const openEditModal = (scheduled: Scheduled) => {
-        setSelectedScheduled(scheduled);
-        setEditContent(scheduled.content || "");
-        setEditScheduledAt(scheduled.scheduled_at || "");
-        setIsModalOpen(true);
-    };
     useEffect(() => {
         setPages(posts);
     }, [posts]);
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setSelectedScheduled(null);
-        setEditContent("");
-        setEditScheduledAt("");
-    };
 
     const openPublishModal = async (scheduled: Scheduled) => {
         setSelectedScheduled(scheduled);
@@ -82,8 +61,10 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
 
         try {
             setLoadingPages(true);
+            const pageListPath = scheduled.type === "facebook_page" ? "facebook/page_list" : "instagram/page_list";
+
             const response = await private_api_call({
-                path: "facebook/page_list",
+            path: pageListPath,
                 method: "GET",
             });
 
@@ -103,13 +84,19 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
     const closePublishModal = () => {
         setIsPublishModalOpen(false);
         setSelectedPageId("");
+        setPagesList([]);
     };
 
     const router= useRouter();
     //redirect to compose page
-    const handleRedirectToCompose = (id: string | number) => {
+    const handleRedirectToCompose = (id: string | number, type?: string) => {
         setRedirectingPostId(id);
-        router.push(`/admin/compose/facebook?post_id=${id}`);
+      const composePath =
+        type === "instagram_account"
+        ? "/admin/compose/instagram"
+        : "/admin/compose/facebook";
+
+      router.push(`${composePath}?post_id=${id}`);
     }
 
 
@@ -125,9 +112,9 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
                     .map((url) => url.trim())
                     .filter(Boolean)
                 : [];
-
+            const pageListPath = selectedScheduled.type === "facebook_page" ? "facebook/page_list" : "instagram/page_list";
             const response = await private_api_call({
-                path: "facebook/publish_post",
+                path: pageListPath,
                 method: "POST",
                 body: {
                     pageId: Number(selectedPageId),
@@ -190,7 +177,7 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Facebook Scheduled Posts</h1>
+            <h1 className="text-2xl font-bold">Scheduled Posts</h1>
             <p className="text-sm text-muted-foreground">
               Manage all your scheduled posts
             </p>
@@ -198,7 +185,7 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
         </div>
 
         {/* Empty */}
-        {!loading && pages.length === 0 && (
+        { pages.length === 0 && (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
             No scheduled posts found.
           </div>
@@ -219,6 +206,18 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <Calendar className="size-4" />{" "}
                         {format(new Date(scheduled.scheduled_at), "PP")}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs flex items-center gap-1">        
+                          <span className="bg-primary text-primary-foreground p-1 rounded-md text-xs flex items-center gap-1">
+                            {scheduled.type === "facebook_page" ? (
+                              <Facebook className="size-4" />
+                            ) : (
+                              <Instagram className="size-4" />
+                            )}
+                          </span>
+                          <span className="truncate">{scheduled.name}</span>
                       </p>
                     </div>
                   </div>
@@ -262,7 +261,7 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRedirectToCompose(scheduled.id) }
+                    onClick={() => handleRedirectToCompose(scheduled.id, scheduled.type) }
                   >
                     {redirectingPostId === scheduled.id ? (
                       <span className="flex items-center gap-1">
@@ -297,7 +296,7 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
 
         {/* Publish Modal */}
         <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle>Publish Scheduled Post</DialogTitle>
             </DialogHeader>
