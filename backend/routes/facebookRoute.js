@@ -9,7 +9,8 @@ import {
   getScheduledPosts,
   editDraftOrScheduledPost,
   getFacebookFeed,
-  getPostComments
+  getPostComments,
+  editPost,
 } from "../controllers/facebookController.js";
 
 
@@ -17,6 +18,7 @@ const router = express.Router()
 router.get("/request_pages", isAuthenticated, reqUsersPageList);
 router.get("/page_list", isAuthenticated, getUsersPageList);
 router.post("/create_post", isAuthenticated, createPost);
+router.put("/edit_post/:postId", isAuthenticated, editPost);
 router.post("/publish_post", isAuthenticated, publishScheduledOrDraftPost);
 router.get("/drafts", isAuthenticated, getDraftsPosts);
 router.put("/drafts/:postId", isAuthenticated, editDraftOrScheduledPost);

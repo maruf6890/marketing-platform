@@ -62,3 +62,42 @@ export const uploadMultiple = async (req, res) => {
     res.status(500).json({ message: error.message, success: false });
   }
 }
+
+
+export const deleteSingle = async (req,res) => {
+  try {
+    const { publicId } = req.params;
+    if (!publicId) {
+      return res.status(400).json({ message: "Public ID is required for deletion" });
+    }
+    const result = await deleteFile(publicId);
+    return res.status(200).json({
+      message: "File deleted successfully",
+      result,
+      success: true,
+    });
+
+  } catch (error) {
+    console.error("Error deleting file from Cloudinary:", error);
+    return res.status(500).json({ message: error.messagem, success: false });
+  } 
+}
+export const deleteFile = async (publicId) => {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId,{invalidate: true});//invalidate true to remove from CDN cache
+    return result;
+  } catch (error) {
+    console.error("Error deleting file from Cloudinary:", error);
+    throw error;
+  }
+}
+
+export const deleteFiles = async (publicIds) => {
+  try {
+    const result = await cloudinary.api.delete_resources(publicIds, { invalidate: true });//invalidate true to remove from CDN cache
+    return result;
+  } catch (error) {
+    console.error("Error deleting files from Cloudinary:", error);
+    throw error;
+  }
+}
