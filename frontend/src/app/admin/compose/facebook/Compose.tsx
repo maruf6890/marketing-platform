@@ -14,28 +14,31 @@ import { uploadMultipleFiles } from "@/actions/upload_files";
 import Image from "next/image";
 import { DateTimePicker } from "@/components/app_inputs/DateTimePicker";
 import { Switch } from "@/components/ui/switch";
-import SingleSelect from "@/components/app_inputs/single_select_input";
 import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 import { Asset } from "../../platform/facebook_pages/action";
 import { toast } from "sonner";
 import { CalendarClock, FileText, Loader2, Send } from "lucide-react";
 import { ai_api_call } from "@/actions/ai_api_call";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import TextInput from "@/components/app_inputs/text_input";
 import AstroidIcon from "@/components/icons/ai";
+import { useRouter } from "next/navigation";
+
 
 
 interface FacebookPageProps {
   pages: Asset[] | null;
+  initialPost?: ExistingPost ;
 }
 
 interface ImageType {
   id: string;
   file: File;
   preview: string;
+  isExisting?: boolean;
+  isEdited?: boolean;
+  public_id?: string;
 }
 
 interface ComposerCardProps {
@@ -51,7 +54,7 @@ interface MediaSectionProps {
   fileRef: React.RefObject<HTMLInputElement>;
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeImage: (id: string) => void;
-  setEditingImage: React.Dispatch<React.SetStateAction<ImageType | null>>;
+  setEditingImage: (img: ImageType) => void;
 }
 
 const DEFAULT_TAGS = [
@@ -68,9 +71,34 @@ const DEFAULT_TAGS = [
   "#Viral",
   "#Engagement",
 ];
+interface ExistingPost {
+  id: string;
+  message: string;
+  tags: string[];
+  images: { url: string; public_id: string }[]; 
+  status: "draft" | "publishable" | "scheduled";
+  scheduledAt?: string;
+}
+const   urlToFile= async(url: string)=>{
+  const response = await fetch(url);
 
-export default function FBPostComposer({ pages }: FacebookPageProps) {
-  const [message, setMessage] = useState("");
+  if (!response.ok) {
+    throw new Error("Failed to fetch image");
+  }
+
+  const blob = await response.blob();
+
+  return new File(
+    [blob],
+    `image.${blob.type.split("/")[1] || "jpg"}`,
+    {
+      type: blob.type,
+    }
+  );
+}
+
+export default function FBPostComposer({ pages, initialPost }: FacebookPageProps) {
+  const [message, setMessage] = useState(initialPost?.message || "");
   const [images, setImages] = useState<ImageType[]>([]);
   const [editingImage, setEditingImage] = useState<ImageType | null>(null);
   const [openEditor, setOpenEditor] = useState(false);
@@ -78,15 +106,27 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
   const [isScheduled, setIsScheduled] = useState(false);
   const [assets, setAssets] = useState<Asset[] | null>(pages);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialPost?.tags || []);
 
   const [aiTags, setAiTags] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
   const [savingPost, setSavingPost] = useState<
     "scheduling" | "publishing" | "drafting" | null
-  >(null);
+    >(null);
+  
+    const handleImageEdit = async (img: ImageType) => {
+      let image = img;
+      if (image.isExisting) {
+        const file = await urlToFile(image.preview);
+        image = { ...image, file, isExisting: false };
+      }
+      setEditingImage(image);
+      setOpenEditor(true);
+    };
+
+
+    
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -97,12 +137,8 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
       id: crypto.randomUUID(),
       file,
       preview: URL.createObjectURL(file),
-      edits: {
-        brightness: 100,
-        contrast: 100,
-        saturation: 100,
-        blur: 0,
-      },
+      isExisting: false,
+      isEdited: false,
     }));
 
     setImages((prev) => [...prev, ...uploaded]);
@@ -110,6 +146,29 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
   useEffect(() => {
     setAssets(pages);
   }, [pages]);
+
+  //const
+  useEffect(() => {
+    if (!initialPost) return;
+
+    setMessage(initialPost.message);
+    setSelectedTags(initialPost.tags || []);
+    if(initialPost.scheduledAt) {
+      setScheduledAt(new Date(initialPost.scheduledAt));
+      setIsScheduled(true);
+    }
+
+    setImages(
+      initialPost.images.map((img) => ({
+        id: crypto.randomUUID(),
+        file: new File([], img.url),
+        preview: img.url,
+        isExisting: true,
+        isEdited: false,
+        public_id: img.public_id,
+      })),
+    );
+  }, [initialPost]);
 
   const removeImage = (id: string) => {
     setImages((prev) => prev.filter((img) => img.id !== id));
@@ -153,7 +212,7 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
 
     setAiLoading(false);
   };
-
+  const router= useRouter();
   const handlePost = async (
     status: "publishable" | "scheduled" | "draft" = "publishable",
   ) => {
@@ -165,12 +224,29 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
       setSavingPost("drafting");
     }
     try {
-      let imagesUrl = [];
-      if (images.length > 0) {
-        const res = await uploadMultipleFiles(images.map((img) => img.file));
-        console.log(res);
-        imagesUrl = res.data;
+      const existingImages = images
+        .filter((img) => img.isExisting)
+        .map((img) => ({ url: img.preview, public_id: img.public_id }));
+
+      const newFiles = images.filter((img) => !img.isExisting).map((img) => img.file);
+
+      let uploadedImages: { url: string; public_id: string }[] = [];
+
+      if (newFiles.length) {
+        const res = await uploadMultipleFiles(newFiles);
+        uploadedImages = res.data;
+        console.log("Uploaded new images:", uploadedImages);
       }
+      // if (modifiedImagesPaths.length > 0) { 
+      //   const  results= await Promise.all(
+      //     modifiedImagesPaths.map((path) => deleteMediaByUrl(path))
+      //   );
+      //   console.log("Deleted modified images:", results);
+        
+      // }
+
+      const imagesUrl = [...existingImages, ...uploadedImages];
+      console.log("Final image URLs for the post:", imagesUrl);
       //req with message, images,tags to backend
       const payload = {
         pageId: selectedAsset?.id || assets?.[0]?.id || null,
@@ -178,19 +254,29 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
         tags: selectedTags,
         images: imagesUrl,
         status: status,
+        scheduled_at:
+          status === "scheduled" && scheduledAt
+            ? scheduledAt.toISOString()
+            : null,
       };
+  
       const resPost = await private_api_call({
-        path: "facebook/create_post",
-        method: "POST",
+        path: initialPost
+          ? `facebook/edit_post/${initialPost.id}`
+          : "facebook/create_post",
+        method: initialPost ? "PUT" : "POST",
         body: payload,
       });
       if (resPost.success) {
-        toast.success("Post created successfully!");
+        toast.success("Post saved successfully!");
         setMessage("");
         setSelectedTags([]);
         setImages([]);
         setScheduledAt(null);
         setIsScheduled(false);
+        if (initialPost) {
+          router.back();
+        }
       } else {
         toast.error(resPost.message);
       }
@@ -207,6 +293,7 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
   const fullPost =
     message + (selectedTags.length ? "\n\n" + selectedTags.join(" ") : "");
   console.log(scheduledAt, isScheduled);
+
 
   return (
     <>
@@ -233,10 +320,7 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
               fileRef={fileRef}
               handleImageUpload={handleImageUpload}
               removeImage={removeImage}
-              setEditingImage={(img) => {
-                setEditingImage(img);
-                setOpenEditor(true);
-              }}
+              setEditingImage={handleImageEdit}
             />
             <SchedulingSection
               isScheduled={isScheduled}
@@ -397,16 +481,18 @@ export default function FBPostComposer({ pages }: FacebookPageProps) {
         image={editingImage?.file ?? null}
         onSave={(editedFile) => {
           if (!editingImage) return;
-
+          
           const preview = URL.createObjectURL(editedFile);
-
+         
           setImages((prev) =>
             prev.map((img) =>
               img.id === editingImage.id
                 ? {
                     ...img,
                     file: editedFile,
+                    isEdited: true,
                     preview,
+                    isExisting: false,
                   }
                 : img,
             ),
@@ -534,7 +620,6 @@ function MediaSection({
   handleImageUpload,
   removeImage,
   setEditingImage,
-  getFilter,
 }: MediaSectionProps) {
   return (
     <section className="bg-card border border-border rounded-2xl p-5">

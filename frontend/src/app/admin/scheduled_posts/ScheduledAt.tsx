@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { Calendar, Edit, Loader2, RefreshCw } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -17,6 +17,11 @@ import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
+import { format } from "date-fns/format";
+import { shouldUseReactServerCondition } from "next/dist/build/utils";
+import Image from "next/image";
+import DeleteDialog from "@/components/app_ui_element/DeleteDialog";
+import { useRouter } from "next/navigation";
 
 type Scheduled = {
     id: string | number;
@@ -32,8 +37,8 @@ type Page = {
     type: string;
 };
 
-export default function ScheduledPage() {
-    const [pages, setPages] = useState<Scheduled[]>([]);
+export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
+    const [pages, setPages] = useState<Scheduled[]>(posts);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedScheduled, setSelectedScheduled] = useState<Scheduled | null>(null);
@@ -45,6 +50,12 @@ export default function ScheduledPage() {
     const [selectedPageId, setSelectedPageId] = useState("");
     const [isPublishing, setIsPublishing] = useState(false);
     const [loadingPages, setLoadingPages] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deletingPostId, setDeletingPostId] = useState<string | number | null>(null);
+    const [pendingDelete, setPendingDelete] = useState(false);
+    const [redirectingPostId, setRedirectingPostId] = useState<string | number | null>(null);
+    const [publishingPostId, setPublishingPostId] = useState<string | number | null>(null);
+    
 
     const openEditModal = (scheduled: Scheduled) => {
         setSelectedScheduled(scheduled);
@@ -52,6 +63,9 @@ export default function ScheduledPage() {
         setEditScheduledAt(scheduled.scheduled_at || "");
         setIsModalOpen(true);
     };
+    useEffect(() => {
+        setPages(posts);
+    }, [posts]);
 
     const closeModal = () => {
         setIsModalOpen(false);
@@ -91,65 +105,13 @@ export default function ScheduledPage() {
         setSelectedPageId("");
     };
 
-    const handleSaveScheduled = async () => {
-        if (!selectedScheduled) return;
+    const router= useRouter();
+    //redirect to compose page
+    const handleRedirectToCompose = (id: string | number) => {
+        setRedirectingPostId(id);
+        router.push(`/admin/compose/facebook?post_id=${id}`);
+    }
 
-        try {
-            setIsSaving(true);
-            const response = await private_api_call({
-                path: `facebook/scheduled_posts/${selectedScheduled.id}`,
-                method: "PUT",
-                body: {
-                    content: editContent,
-                    scheduled_at: editScheduledAt || null,
-                },
-            });
-
-            if (response.success) {
-                toast.success("Scheduled post updated successfully!");
-                // Update the scheduled post in the list
-                setPages(pages.map(p =>
-                    p.id === selectedScheduled.id
-                        ? { ...p, content: editContent, scheduled_at: editScheduledAt }
-                        : p
-                ));
-                closeModal();
-            } else {
-                toast.error(response.message || "Failed to update scheduled post");
-            }
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to update scheduled post");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const fetchScheduledPosts = async () => {
-        try {
-            setLoading(true);
-
-            const response = await private_api_call({
-                path: "facebook/scheduled_posts",
-                method: "GET",
-            });
-
-
-            if (response.success) {
-                toast.success("Facebook scheduled posts fetched successfully!");
-                setPages(response.data);
-            } else {
-                toast.error(response.message);
-                console.error("Failed to fetch Facebook scheduled posts:", response.message);
-            }
-
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to fetch Facebook scheduled posts.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handlePublishScheduled = async () => {
         if (!selectedScheduled || !selectedPageId) return;
@@ -192,205 +154,214 @@ export default function ScheduledPage() {
         }
     };
 
+    //const handle delete post
+     const handleDeleteScheduled = async (id: string | number) => {
+        if (!id) {
+            return toast.error("selected post id is invalid");
+         }
+         
+         try {
+            setPendingDelete(true);
+            const response = await private_api_call({
+                path: `posts/${id}`,
+                method: "DELETE",
+            });
+
+            if (response.success) {
+                toast.success("Scheduled post deleted successfully!");
+                setPages((prev) => prev.filter((item) => item.id !== id));
+                setIsDeleting(false);
+                setDeletingPostId(null);
+            } else {
+                toast.error(response.message || "Failed to delete scheduled post");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete scheduled post");
+        }finally {
+            setPendingDelete(false);
+        }
+    };
+
+    console.log("Scheduled Posts:", pages);
+
     return (
-        <div className="space-y-6 p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Facebook Scheduled Posts</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Manage all your scheduled posts
-                    </p>
-                </div>
-
-                <Button onClick={fetchScheduledPosts} disabled={loading}>
-                    <RefreshCw
-                        className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-                    />
-                    {loading ? "Loading..." : "Fetch Scheduled Posts"}
-                </Button>
-            </div>
-
-            {/* Empty */}
-            {!loading && pages.length === 0 && (
-                <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
-                    No scheduled posts found.
-                </div>
-            )}
-
-            {/* Full Row Cards */}
-            <div className="grid gap-4">
-                {pages.map((scheduled: Scheduled) => (
-                    <div
-                        key={scheduled.id}
-                        className="rounded-lg border bg-card p-6 shadow-sm hover:shadow-md transition-shadow"
-                    >
-                        <div className="flex flex-col gap-4">
-                            {/* Header with ID and Date */}
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <p className="text-sm text-muted-foreground">
-                                        Scheduled ID: {scheduled.id}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="bg-muted/50 rounded p-3">
-                                <p className="text-sm whitespace-pre-wrap wrap-break-word">
-                                    {scheduled.content}
-                                </p>
-                            </div>
-
-                            {/* Media Preview */}
-                            {scheduled.media_urls && (
-                                <div className="flex gap-2 flex-wrap">
-                                    {scheduled.media_urls
-                                        .split(",")
-                                        .slice(0, 3)
-                                        .map((url: string, idx: number) => (
-                                            <div
-                                                key={idx}
-                                                className="relative w-24 h-24 rounded-md overflow-hidden bg-muted"
-                                            >
-                                                <img
-                                                    src={url.trim()}
-                                                    alt={`Media ${idx + 1}`}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        e.currentTarget.src =
-                                                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect fill='%23e5e7eb' width='96' height='96'/%3E%3Ctext x='50%25' y='50%25' font-size='12' fill='%236b7280' text-anchor='middle' dy='.3em'%3EImage Error%3C/text%3E%3C/svg%3E";
-                                                    }}
-                                                />
-                                            </div>
-                                        ))}
-                                    {scheduled.media_urls.split(",").length > 3 && (
-                                        <div className="w-24 h-24 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                                            +{scheduled.media_urls.split(",").length - 3} more
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2 justify-end">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openEditModal(scheduled)}
-                                >
-                                    Edit
-                                </Button>
-                                <Button variant="outline" size="sm" className="text-destructive">
-                                    Delete
-                                </Button>
-                                <Button size="sm" onClick={() => openPublishModal(scheduled)}>
-                                    Publish
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Edit Modal */}
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Edit Scheduled Post</DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-4 py-4">
-                        {/* Content */}
-                        <div className="space-y-2">
-                            <Label htmlFor="content">Content</Label>
-                            <Textarea
-                                id="content"
-                                placeholder="Enter post content..."
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                className="min-h-40 resize-none"
-                                disabled
-                            />
-                        </div>
-
-                        {/* Scheduled Date */}
-                        <div className="space-y-2">
-                            <Label htmlFor="scheduled-at">
-                                Schedule (Optional)
-                            </Label>
-                            <Input
-                                id="scheduled-at"
-                                type="datetime-local"
-                                value={editScheduledAt}
-                                onChange={(e) => setEditScheduledAt(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={closeModal}
-                            disabled={isSaving}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleSaveScheduled}
-                            disabled={isSaving || !editContent.trim()}
-                        >
-                            {isSaving ? "Saving..." : "Save Changes"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Publish Modal */}
-            <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>Publish Scheduled Post</DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="page">Select Page</Label>
-                            <DefaultSelect
-                                value={selectedPageId}
-                                onValueChange={setSelectedPageId}
-                                options={pagesList.map((page) => ({
-                                    label: page.name,
-                                    value: String(page.id),
-                                }))}
-                                placeholder={loadingPages ? "Loading pages..." : "Choose a page"}
-                                className="w-full"
-                            />
-                            {loadingPages && (
-                                <p className="text-xs text-muted-foreground">
-                                    Loading pages...
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={closePublishModal}
-                            disabled={isPublishing}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handlePublishScheduled}
-                            disabled={isPublishing || !selectedPageId}
-                        >
-                            {isPublishing ? "Publishing..." : "Publish"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Facebook Scheduled Posts</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage all your scheduled posts
+            </p>
+          </div>
         </div>
+
+        {/* Empty */}
+        {!loading && pages.length === 0 && (
+          <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
+            No scheduled posts found.
+          </div>
+        )}
+
+        {/* Full Row Cards */}
+        <div className="grid gap-4">
+          {pages.map((scheduled: Scheduled) => (
+            <div
+              key={scheduled.id}
+              className="rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="space-y-1">
+                {/* Header with ID and Date */}
+                {scheduled.scheduled_at && (
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Calendar className="size-4" />{" "}
+                        {format(new Date(scheduled.scheduled_at), "PP")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Content */}
+                <div className=" ">
+                  <p className="text-sm truncate ">{scheduled.content}</p>
+                </div>
+
+                {/* Media Preview */}
+                {scheduled.media_urls && (
+                  <div className="flex  gap-3 mt-4">
+                    {scheduled.media_urls
+                      .split(",")
+                      .slice(0, 3)
+                      .map((url: string, idx: number) => (
+                        <Image
+                          key={idx} 
+                          height={164}
+                          width={164}
+                          src={url.trim()}
+                          alt={`Media ${idx + 1}`}
+                          className=" object-cover aspect-4/3 border border-border rounded-sm"
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect fill='%23e5e7eb' width='96' height='96'/%3E%3Ctext x='50%25' y='50%25' font-size='12' fill='%236b7280' text-anchor='middle' dy='.3em'%3EImage Error%3C/text%3E%3C/svg%3E";
+                          }}
+                        />
+                      ))}
+                    {scheduled.media_urls.split(",").length > 3 && (
+                      <div className="w-24 h-24 rounded-md bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                        +{scheduled.media_urls.split(",").length - 3} more
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRedirectToCompose(scheduled.id) }
+                  >
+                    {redirectingPostId === scheduled.id ? (
+                      <span className="flex items-center gap-1">
+                        <Loader2 className="animate-spin size-4" /> Loading...
+                      </span>
+                    ) : (
+                       <span className="flex items-center gap-1">
+                        <Edit className="size-4" /> Edit
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive"
+                    onClick={() => {
+                      setDeletingPostId(scheduled.id);
+                      setIsDeleting(true);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                  <Button size="sm" onClick={() => openPublishModal(scheduled)}>
+                    Publish
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+
+        {/* Publish Modal */}
+        <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Publish Scheduled Post</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="page">Select Page</Label>
+                <DefaultSelect
+                  value={selectedPageId}
+                  onValueChange={setSelectedPageId}
+                  options={pagesList.map((page) => ({
+                    label: page.name,
+                    value: String(page.id),
+                  }))}
+                  placeholder={
+                    loadingPages ? "Loading pages..." : "Choose a page"
+                  }
+                  className="w-full"
+                />
+                {loadingPages && (
+                  <p className="text-xs text-muted-foreground">
+                    Loading pages...
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={closePublishModal}
+                disabled={isPublishing}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePublishScheduled}
+                disabled={isPublishing || !selectedPageId}
+              >
+                {isPublishing ? "Publishing..." : "Publish"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+            </Dialog>
+            <DeleteDialog
+                open={isDeleting}
+                loading={pendingDelete}
+                onOpenChange={setIsDeleting}
+                onSubmit={() => {
+                    if (deletingPostId) {
+                        handleDeleteScheduled(deletingPostId);
+                    }
+                }}
+                onClose={() => {
+                     setIsDeleting(false);
+                     setDeletingPostId(null);
+                }}
+           
+                title="Confirm Deletion"
+                description="Are you sure you want to delete this scheduled post? This action cannot be undone."
+                cancelLabel="Cancel"
+                submitLabel="Delete"
+            />  
+            
+      </div>
     );
 }

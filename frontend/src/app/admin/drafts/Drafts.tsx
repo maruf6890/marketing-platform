@@ -17,6 +17,7 @@ import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
+import { DateTimePicker } from "@/components/app_inputs/DateTimePicker";
 
 type Draft = {
     id: string | number;
@@ -32,8 +33,8 @@ type Page = {
     type: string;
 };
 
-export default function DraftsPage() {
-    const [pages, setPages] = useState<Draft[]>([]);
+export default function DraftsPage({ drafts }: { drafts: Draft[] }) {
+    const [pages, setPages] = useState<Draft[]>(drafts);
     const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedDraft, setSelectedDraft] = useState<Draft | null>(null);
@@ -125,31 +126,7 @@ export default function DraftsPage() {
         }
     };
 
-    const fetchDrafts = async () => {
-        try {
-            setLoading(true);
 
-            const response = await private_api_call({
-                path: "facebook/drafts",
-                method: "GET",
-            });
-
-
-            if (response.success) {
-                toast.success("Facebook drafts fetched successfully!");
-                setPages(response.data);
-            } else {
-                toast.error(response.message);
-                console.error("Failed to fetch Facebook drafts:", response.message);
-            }
-
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to fetch Facebook drafts.");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handlePublishDraft = async () => {
         if (!selectedDraft || !selectedPageId) return;
@@ -202,13 +179,6 @@ export default function DraftsPage() {
                         Manage all your draft posts
                     </p>
                 </div>
-
-                <Button onClick={fetchDrafts} disabled={loading}>
-                    <RefreshCw
-                        className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
-                    />
-                    {loading ? "Loading..." : "Fetch Drafts"}
-                </Button>
             </div>
 
             {/* Empty */}
@@ -297,38 +267,22 @@ export default function DraftsPage() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Edit Draft</DialogTitle>
+                        <DialogTitle>Scheduled At</DialogTitle>
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {/* Content */}
-                        <div className="space-y-2">
-                            <Label htmlFor="content">Content</Label>
-                            <Textarea
-                                id="content"
-                                placeholder="Enter post content..."
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                className="min-h-30 resize-none"
-                                disabled
-                            />
-                        </div>
+                       
 
                         {/* Scheduled Date */}
                         <div className="space-y-2">
                             <Label htmlFor="scheduled-at">
-                                Schedule (Optional)
+                                Schedule
                             </Label>
-                            <Input
-                                id="scheduled-at"
-                                type="datetime-local"
-                                value={editScheduledAt}
-                                onChange={(e) => setEditScheduledAt(e.target.value)}
-                            />
+                            <DateTimePicker value={editScheduledAt? new Date(editScheduledAt) : new Date()} onChange={(date) => setEditScheduledAt(date.toISOString())}  />
                         </div>
                     </div>
 
-                    <DialogFooter>
+                    <DialogFooter>  
                         <Button
                             variant="outline"
                             onClick={closeModal}
@@ -339,7 +293,7 @@ export default function DraftsPage() {
                         <Button
                             onClick={handleSaveDraft}
                             disabled={isSaving || !editContent.trim()}
-                        >
+                            >
                             {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                     </DialogFooter>

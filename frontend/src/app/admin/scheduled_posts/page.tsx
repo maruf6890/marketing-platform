@@ -1,7 +1,9 @@
+import { getScheduledPosts } from "./actions";
 import SchedulePage from "./ScheduledAt";
 
-export default function page() {
+export default async function page() {
+  const data = await getScheduledPosts();
   return (
-    <SchedulePage />
+    <SchedulePage posts={data} />
   )
 }

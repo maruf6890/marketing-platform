@@ -11,6 +11,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { DefaultButton } from "./DefaultButton";
+import { Loader2, Trash2 } from "lucide-react";
 
 interface DeleteDialogProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,6 +25,7 @@ interface DeleteDialogProps {
   cancelLabel?: string;
   submitLabel?: string;
   trigger?: React.ReactNode;
+  loading?: boolean;
 }
 export default function DeleteDialog({
   open,
@@ -34,11 +36,12 @@ export default function DeleteDialog({
   description = "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
   cancelLabel = "Cancel",
   submitLabel = "Continue",
+  loading = false,
   trigger = <span>Open</span>,
 }: DeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    
 
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -50,8 +53,18 @@ export default function DeleteDialog({
           <DefaultButton variant="outline" onClick={onClose}>
             {cancelLabel}
           </DefaultButton>
-          <DefaultButton variant="default" onClick={onSubmit}>
-            {submitLabel}
+          <DefaultButton className="flex items-center gap-1" variant="default" onClick={onSubmit} disabled={loading}>
+            {
+              !loading ? <>
+                <Trash2 className=" size-4" />
+                {submitLabel}
+              
+              </> : 
+                <>
+                  <Loader2 className="animate-spin size-4" />
+                  Deleting...
+                </>
+           }
           </DefaultButton>
         </DialogFooter>
       </DialogContent>

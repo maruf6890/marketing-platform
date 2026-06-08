@@ -1,11 +1,26 @@
+"use client";
 import { Calendar, CalendarCurrentDate, CalendarDayView, CalendarMonthView, CalendarNextTrigger, CalendarPrevTrigger, CalendarTodayTrigger, CalendarViewTrigger, CalendarWeekView, CalendarYearView } from '@/components/FullCalandar';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React from 'react'
 
+import React from 'react'
+import { Overlay } from 'vaul';
+interface Events {
+  id: string;
+  start: Date;
+  end: Date;
+  title: string;
+  color: string;
+}
 export default function Events() {
+  const [selectedEvent, setSelectedEvent] = React.useState<Events | null>(null);
+
+
+
   return (
     <div>
-          <Calendar
+      <Calendar
+        onEventClick={(event) => setSelectedEvent(event as Events)}
         defaultDate={new Date()}
         events={[
           {
@@ -78,6 +93,17 @@ export default function Events() {
           </div>
         </div>
       </Calendar>
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <Overlay className="fixed inset-0 bg-black/50" />
+        <DialogContent className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded">
+          <DialogTitle>{selectedEvent?.title}</DialogTitle>
+          <DialogDescription>
+            Start: {selectedEvent?.start.toLocaleString()}
+            <br />
+            End: {selectedEvent?.end.toLocaleString()}
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

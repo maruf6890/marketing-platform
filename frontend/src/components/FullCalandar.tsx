@@ -194,7 +194,8 @@ const EventGroup = ({
 }: {
   events: CalendarEvent[];
   hour: Date;
-}) => {
+  }) => {
+  const {onEventClick} = useCalendar();
   return (
     <div className="h-20 border-t last:border-b">
       {events
@@ -208,9 +209,10 @@ const EventGroup = ({
             <div
               key={event.id}
               className={cn(
-                "relative",
+                "relative ",
                 dayEventVariants({ variant: event.color }),
               )}
+              onClick={() => onEventClick?.(event)}
               style={{
                 top: `${startPosition * 100}%`,
                 height: `${hoursDifference * 100}%`,
@@ -236,7 +238,7 @@ const CalendarDayView = () => {
       <TimeTable />
       <div className="flex-1">
         {hours.map((hour) => (
-          <EventGroup key={hour.toString()} hour={hour} events={events} />
+          <EventGroup  key={hour.toString()} hour={hour} events={events} />
         ))}
       </div>
     </div>
@@ -326,7 +328,7 @@ const CalendarWeekView = () => {
 };
 
 const CalendarMonthView = () => {
-  const { date, view, events, locale } = useCalendar();
+  const { date, view, events, locale,onEventClick } = useCalendar();
 
   const monthDates = useMemo(() => getDaysInMonth(date), [date]);
   const weekDays = useMemo(() => generateWeekdays(locale), [locale]);
@@ -376,6 +378,7 @@ const CalendarMonthView = () => {
                   <div
                     key={event.id}
                     className="px-1 rounded text-sm flex items-center gap-1"
+                    onClick={() => onEventClick?.(event)}
                   >
                     <div
                       className={cn(
