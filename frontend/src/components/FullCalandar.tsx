@@ -26,8 +26,6 @@ import {
   subYears,
 } from "date-fns";
 import { enUS } from "date-fns/locale/en-US";
-import router from "next/dist/shared/lib/router/router";
-import { useRouter } from "next/navigation";
 import {
   ReactNode,
   createContext,
@@ -605,7 +603,7 @@ const TimeTable = () => {
           >
             {now.getHours() === hour && (
               <div
-                className="absolute z- left-full translate-x-2 w-dvw h-[2px] bg-red-500"
+                className="absolute z- left-full translate-x-2 w-dvw h-0.5 bg-red-500"
                 style={{
                   top: `${(now.getMinutes() / 60) * 100}%`,
                 }}

@@ -60,7 +60,7 @@ export default function LoginForm() {
       }
 
       resetData();
-      router.push("/admin");
+      router.push("/admin/compose/facebook");
     } else {
       console.error(result.message || "Failed to log in");
       toast.error(
