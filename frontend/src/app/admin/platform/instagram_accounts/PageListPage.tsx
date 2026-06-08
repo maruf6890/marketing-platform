@@ -8,8 +8,10 @@ import { Asset } from "./action";
 import { cleanString } from "@/lib/utils";
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function PagesListPage({ data }: { data: Asset[] | null }) {
+  const router = useRouter();
   const [accounts, setAccounts] = useState<Asset[]>(data || []);
   const [loading, setLoading] = useState(false);
 
@@ -92,7 +94,7 @@ export default function PagesListPage({ data }: { data: Asset[] | null }) {
 
             {/* Right actions */}
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" onClick={() => router.push("/admin/feed/instagram")}>
                 View
               </Button>
               <Button size="sm">Post</Button>

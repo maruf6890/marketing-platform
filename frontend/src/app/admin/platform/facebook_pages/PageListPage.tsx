@@ -98,7 +98,7 @@ export default function PagesListPage({data}: {data:Asset[] | null}) {
 
             {/* Right actions */}
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => router.push("/admin/feed")}>
+              <Button size="sm" variant="outline" onClick={() => router.push("/admin/feed/facebook")}>
                 View
               </Button>
               <Button size="sm">Post</Button>
