@@ -26,6 +26,8 @@ import {
   subYears,
 } from "date-fns";
 import { enUS } from "date-fns/locale/en-US";
+import router from "next/dist/shared/lib/router/router";
+import { useRouter } from "next/navigation";
 import {
   ReactNode,
   createContext,
@@ -90,6 +92,12 @@ export type CalendarEvent = {
   start: Date;
   end: Date;
   title: string;
+  content?: string;
+  media_count?: number;
+  asset_id?: string;
+  asset_name?: string;
+  asset_url?: string;
+  status?: string;
   color?: VariantProps<typeof monthEventVariants>["variant"];
 };
 
@@ -121,6 +129,7 @@ const Calendar = ({
   const changeView = (view: View) => {
     setView(view);
     onChangeView?.(view);
+  
   };
 
   useHotkeys("m", () => changeView("month"), {

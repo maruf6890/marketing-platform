@@ -1,43 +1,30 @@
 "use client";
-import { Calendar, CalendarCurrentDate, CalendarDayView, CalendarMonthView, CalendarNextTrigger, CalendarPrevTrigger, CalendarTodayTrigger, CalendarViewTrigger, CalendarWeekView, CalendarYearView } from '@/components/FullCalandar';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, CalendarCurrentDate, CalendarDayView, CalendarEvent, CalendarMonthView, CalendarNextTrigger, CalendarPrevTrigger, CalendarTodayTrigger, CalendarViewTrigger, CalendarWeekView, CalendarYearView } from '@/components/FullCalandar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { format } from 'date-fns/format';
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Globe, ImageIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import React from 'react'
 import { Overlay } from 'vaul';
-interface Events {
-  id: string;
-  start: Date;
-  end: Date;
-  title: string;
-  color: string;
-}
-export default function Events() {
-  const [selectedEvent, setSelectedEvent] = React.useState<Events | null>(null);
+
+export default function Events({ events }: { events: CalendarEvent[] }) {
+  const [selectedEvent, setSelectedEvent] = React.useState<CalendarEvent | null>(null);
+  const router = useRouter();
 
 
 
   return (
     <div>
       <Calendar
-        onEventClick={(event) => setSelectedEvent(event as Events)}
+        onEventClick={(event) => setSelectedEvent(event as CalendarEvent)}
         defaultDate={new Date()}
-        events={[
-          {
-            id: "1",
-            start: new Date("2026-06-26T09:30:00Z"),
-            end: new Date("2026-06-26T14:30:00Z"),
-            title: "event A",
-            color: "pink",
-          },
-          {
-            id: "2",
-            start: new Date("2026-06-26T10:00:00Z"),
-            end: new Date("2026-06-26T10:30:00Z"),
-            title: "event B",
-            color: "blue",
-          },
-        ]}
+        events={events}
+        onChangeView={(view) => {
+          router.replace(`/admin/events?view=${view}`);
+        }}
       >
         <div className="h-dvh py-6 flex flex-col">
           <div className="flex px-6 items-center gap-2 mb-6">
@@ -93,15 +80,83 @@ export default function Events() {
           </div>
         </div>
       </Calendar>
-      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+      <Dialog
+        open={!!selectedEvent}
+        onOpenChange={() => setSelectedEvent(null)}
+      >
         <Overlay className="fixed inset-0 bg-black/50" />
-        <DialogContent className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded">
-          <DialogTitle>{selectedEvent?.title}</DialogTitle>
-          <DialogDescription>
-            Start: {selectedEvent?.start.toLocaleString()}
-            <br />
-            End: {selectedEvent?.end.toLocaleString()}
-          </DialogDescription>
+
+        <DialogContent className="fixed left-1/2 top-1/2 w-[95%] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-0 overflow-hidden">
+          <DialogHeader className="border-b p-6">
+            <DialogTitle className="text-lg font-semibold">
+              {selectedEvent?.title}
+            </DialogTitle>
+
+            <DialogDescription className="sr-only">
+              Post details
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 p-6">
+            {/* Page */}
+            <div className="flex items-start gap-3">
+              <Globe className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Facebook Page</p>
+                <p className="font-medium">{selectedEvent?.asset_name}</p>
+              </div>
+            </div>
+
+            {/* Schedule */}
+            <div className="flex items-start gap-3">
+              <CalendarDays className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Published At</p>
+                <p className="font-medium">
+                  {selectedEvent?.start
+                    ? format(
+                        new Date(selectedEvent.start),
+                        "MMM dd, yyyy • hh:mm a",
+                      )
+                    : "-"}
+                </p>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Status</p>
+                <p className="font-medium capitalize">
+                  {selectedEvent?.status}
+                </p>
+              </div>
+            </div>
+
+            {/* Media */}
+            <div className="flex items-start gap-3">
+              <ImageIcon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Media Files</p>
+                <p className="font-medium">{selectedEvent?.media_count ?? 0}</p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="rounded-lg border p-4">
+              <p className="mb-2 text-xs text-muted-foreground">Post Content</p>
+
+              <p className="line-clamp-4 text-sm leading-relaxed">
+                {selectedEvent?.content || "No content available"}
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="border-t p-4">
+            <Button variant="outline" onClick={() => setSelectedEvent(null)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

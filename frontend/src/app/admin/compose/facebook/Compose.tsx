@@ -237,13 +237,7 @@ export default function FBPostComposer({ pages, initialPost }: FacebookPageProps
         uploadedImages = res.data;
         console.log("Uploaded new images:", uploadedImages);
       }
-      // if (modifiedImagesPaths.length > 0) { 
-      //   const  results= await Promise.all(
-      //     modifiedImagesPaths.map((path) => deleteMediaByUrl(path))
-      //   );
-      //   console.log("Deleted modified images:", results);
-        
-      // }
+     
 
       const imagesUrl = [...existingImages, ...uploadedImages];
       console.log("Final image URLs for the post:", imagesUrl);
