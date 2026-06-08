@@ -347,7 +347,7 @@ export default function FBPostComposer({ pages, initialPost }: FacebookPageProps
                     savingPost === "scheduling"
                   }
                   onClick={() => handlePost("scheduled")}
-                  className="flex-[2] h-11 rounded-xl"
+                  className="flex-2 h-11 rounded-xl"
                 >
                   {savingPost === "scheduling" ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -363,7 +363,7 @@ export default function FBPostComposer({ pages, initialPost }: FacebookPageProps
                 <Button
                   disabled={!message.trim() || savingPost === "publishing"}
                   onClick={() => handlePost("publishable")}
-                  className="flex-[2] h-11 rounded-xl"
+                  className="flex-2 h-11 rounded-xl"
                 >
                   {savingPost === "publishing" ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -579,7 +579,7 @@ function ComposerCard({
         placeholder="What's on your mind?"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        className="min-h-[140px] resize-none rounded-xl"
+        className="min-h-35 resize-none rounded-xl"
       />
 
       <div className="flex items-center justify-between text-xs">

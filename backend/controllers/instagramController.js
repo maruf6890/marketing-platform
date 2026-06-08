@@ -213,15 +213,16 @@ export const createPost = async (req, res) => {
     //insert into posts (user_id,content_type,content,status,scheduled_at) value
     const [result] = await connection.query(
       `
-      INSERT INTO posts (user_id, content_type, content, status, scheduled_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO posts (user_id, content_type, content, status, scheduled_at, platform_asset_id)
+      VALUES (?, ?, ?, ?, ?, ?)
       `,
       [
         userId,
         "post",
         message + " " + tags.map((tag) => `${tag}`).join(" "),
         status,
-        scheduled_at,
+        scheduled_at && status === "scheduled" ? new Date(scheduled_at) : null,
+        pageId,
       ],
     );
     const postId = result.insertId;
@@ -349,7 +350,7 @@ export const createPost = async (req, res) => {
       }
 
       console.log("Instagram Post ID:", publishedPostId);
-      
+
       //update post status to published
       await connection.query(
         `
@@ -498,7 +499,7 @@ export const getInstagramFeed = async (req, res) => {
   }
 }
 
-export const getInstagramPostComments = async (req, res) => { 
+export const getPostComments = async (req, res) => {
   try {
     const { mediaId } = req.params;
     const { accessToken } = req.body;
@@ -537,5 +538,422 @@ export const getInstagramPostComments = async (req, res) => {
       success: false,
       message: "Failed to load Instagram comments",
     });
+  }
+};
+
+//edit post by post id
+export const editPost = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { postId } = req.params;
+    if (!postId) {
+      return res.status(400).json({
+        success: false,
+        message: "Post ID is required",
+      });
+    }
+    const {
+      pageId,
+      message,
+      images = [],
+      tags = [],
+      status,
+      scheduled_at,
+    } = req.body;
+
+    console.log("Updating post with data:", {
+      pageId,
+      message,
+      images,
+      tags,
+      status,
+      scheduled_at,
+    });
+
+    // 1. Get page access token
+    const [rows] = await pool.query(
+      `
+      SELECT access_token, asset_id
+      FROM user_platform_assets
+      WHERE id = ?
+      `,
+      [pageId],
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Page not found" });
+    }
+
+    const pageAccessToken = rows[0].access_token;
+    const pageAssetId = rows[0].asset_id;
+
+    // 2. Update post content
+    const fullContent = message + " " + (tags.length ? tags.join(" ") : "");
+
+    const scheduledDate = scheduled_at ? new Date(scheduled_at) : null;
+
+    await pool.query(
+      `
+      UPDATE posts
+      SET content = ?, status = ?, scheduled_at = ?
+      WHERE id = ? AND user_id = ?
+      `,
+      [fullContent, status, scheduledDate, postId, userId],
+    );
+
+    // 3. Get existing media
+    const [existingMediaRows] = await pool.query(
+      `
+      SELECT *
+      FROM media
+      WHERE post_id = ?
+      `,
+      [postId],
+    );
+
+    // 4. Find removed media (to delete)
+    const removedMedia = existingMediaRows.filter(
+      (row) => !images.some((img) => img.url === row.url),
+    );
+
+    const removedPublicIds = removedMedia
+      .map((row) => row.public_id)
+      .filter(Boolean);
+
+    console.log("Removing media:", removedPublicIds);
+
+    // 5. Delete from DB
+    if (removedMedia.length > 0) {
+      const ids = removedMedia.map((m) => m.id);
+
+      await pool.query(
+        `
+        DELETE FROM media
+        WHERE post_id = ?
+        AND id IN (?)
+        `,
+        [postId, ids],
+      );
+    }
+
+    // 6. Delete from Cloudinary
+    if (removedPublicIds.length > 0) {
+      await deleteFiles(removedPublicIds);
+    }
+
+    // 7. Find new images (avoid duplicates)
+    const existingUrls = new Set(existingMediaRows.map((m) => m.url));
+
+    const newImages = images.filter((img) => !existingUrls.has(img.url));
+
+    // 8. Insert new media
+    if (newImages.length > 0) {
+      const mediaValues = newImages.map((img) => [
+        userId,
+        postId,
+        "image",
+        img.url,
+        "uploaded",
+        img.public_id || null,
+      ]);
+      //
+      const [mediaResult] = await pool.query(
+        `
+        INSERT INTO media (user_id, post_id, type, url, upload_status, public_id)
+        VALUES ?
+        ON DUPLICATE KEY UPDATE
+        url = VALUES(url)
+        `,
+        [mediaValues],
+      );
+
+      if (mediaResult.affectedRows === 0) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to save media",
+        });
+      }
+    }
+
+    // 9. Handle draft/scheduled
+    if (status === "scheduled" || status === "draft") {
+      return res.status(200).json({
+        message: "Post saved successfully",
+        success: true,
+      });
+    }
+
+    // 10. Publish to Facebook
+    if (status === "publishable") {
+
+      const caption = `${message} ${tags.join(" ")}`.trim();
+
+      if (images.length === 0) {
+        throw new Error(
+          "Instagram feed posts require at least one image or video."
+        );
+      }
+
+      if (images.length === 1) {
+        // Create media container
+        const { data: container } = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/media`,
+          null,
+          {
+            params: {
+              image_url: images[0].url,
+              caption,
+              access_token: pageAccessToken,
+            },
+          }
+        );
+
+        // Publish media
+        const { data: publish } = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/media_publish`,
+          null,
+          {
+            params: {
+              creation_id: container.id,
+              access_token: pageAccessToken,
+            },
+          }
+        );
+
+        publishedPostId = publish.id;
+
+        console.log("Instagram single image published:", publish);
+      } else {
+        // Create carousel items
+        const childIds = [];
+
+        for (const image of images) {
+          const { data: child } = await axios.post(
+            `https://graph.facebook.com/v25.0/${pageAssetId}/media`,
+            null,
+            {
+              params: {
+                image_url: image.url,
+                is_carousel_item: true,
+                access_token: pageAccessToken,
+              },
+            }
+          );
+
+          childIds.push(child.id);
+        }
+
+        // Create carousel container
+        const { data: carousel } = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/media`,
+          null,
+          {
+            params: {
+              media_type: "CAROUSEL",
+              children: childIds.join(","),
+              caption,
+              access_token: pageAccessToken,
+            },
+          }
+        );
+
+        // Publish carousel
+        const { data: publish } = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/media_publish`,
+          null,
+          {
+            params: {
+              creation_id: carousel.id,
+              access_token: pageAccessToken,
+            },
+          }
+        );
+
+        publishedPostId = publish.id;
+
+        console.log("Instagram carousel published:", publish);
+      }
+
+      console.log("Instagram Post ID:", publishedPostId);
+
+      //update post status to published
+      await connection.query(
+        `
+        UPDATE posts
+        SET status = 'published', published_at = NOW()
+        WHERE id = ?
+        `,
+        [postId],
+      );
+
+      return res.status(200).json({
+        message: "Post created and published successfully",
+        success: true,
+      });
+    }
+  } catch (error) {
+    console.error(error.response?.data || error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
+
+export const publishScheduledOrDraftPost = async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const userId = req.user.id;
+    const {
+      pageId,
+      postId,
+      message,
+      images,
+      tags,
+      scheduled_at = null,
+    } = req.body;
+
+    console.log("Creating post with data:", {
+      pageId,
+      postId,
+      message,
+      images,
+      tags,
+      scheduled_at,
+    });
+    const [rows] = await pool.query(
+      `
+      SELECT access_token,asset_id
+      FROM user_platform_assets WHERE id = ?
+      `,
+      [pageId],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "Page not found",
+      });
+    }
+    console.log("Retrieved page access token:", rows[0].access_token);
+
+    const pageAccessToken = rows[0]?.access_token;
+    const pageAssetId = rows[0]?.asset_id;
+
+    const caption = `${message} ${tags.join(" ")}`.trim();
+
+    if (images.length === 0) {
+      throw new Error(
+        "Instagram feed posts require at least one image or video."
+      );
+    }
+
+    let publishedPostId = null;
+
+    if (images.length === 1) {
+      // Create media container
+      const { data: container } = await axios.post(
+        `https://graph.facebook.com/v25.0/${pageAssetId}/media`,
+        null,
+        {
+          params: {
+            image_url: images[0].url,
+            caption,
+            access_token: pageAccessToken,
+          },
+        }
+      );
+
+      // Publish media
+      const { data: publish } = await axios.post(
+        `https://graph.facebook.com/v25.0/${pageAssetId}/media_publish`,
+        null,
+        {
+          params: {
+            creation_id: container.id,
+            access_token: pageAccessToken,
+          },
+        }
+      );
+
+      publishedPostId = publish.id;
+
+      console.log("Instagram single image published:", publish);
+    } else {
+      // Create carousel items
+      const childIds = [];
+
+      for (const image of images) {
+        const { data: child } = await axios.post(
+          `https://graph.facebook.com/v25.0/${pageAssetId}/media`,
+          null,
+          {
+            params: {
+              image_url: image.url,
+              is_carousel_item: true,
+              access_token: pageAccessToken,
+            },
+          }
+        );
+
+        childIds.push(child.id);
+      }
+
+      // Create carousel container
+      const { data: carousel } = await axios.post(
+        `https://graph.facebook.com/v25.0/${pageAssetId}/media`,
+        null,
+        {
+          params: {
+            media_type: "CAROUSEL",
+            children: childIds.join(","),
+            caption,
+            access_token: pageAccessToken,
+          },
+        }
+      );
+
+      // Publish carousel
+      const { data: publish } = await axios.post(
+        `https://graph.facebook.com/v25.0/${pageAssetId}/media_publish`,
+        null,
+        {
+          params: {
+            creation_id: carousel.id,
+            access_token: pageAccessToken,
+          },
+        }
+      );
+
+      publishedPostId = publish.id;
+
+      console.log("Instagram carousel published:", publish);
+    }
+
+    console.log("Instagram Post ID:", publishedPostId);
+    //update post status to published
+    await connection.query(
+      `
+        UPDATE posts
+        SET status = 'published', published_at = NOW()
+        WHERE id = ?
+        `,
+      [postId],
+    );
+
+    return res.status(200).json({
+      message: "Post created and published successfully",
+      success: true,
+    });
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    console.error(error.response?.data || error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  } finally {
+    await connection.release();
   }
 };

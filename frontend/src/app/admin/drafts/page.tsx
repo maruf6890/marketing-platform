@@ -4,6 +4,6 @@ import DraftsPage from "./Drafts";
 export default async function page() {
   const drafts = await getDrafts();
   return (
-    <DraftsPage drafts={drafts} />
+    <DraftsPage posts={drafts} />
   )
 }
