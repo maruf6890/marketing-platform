@@ -69,6 +69,7 @@ export default function FacebookFeedPage() {
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
     const [loadingComments, setLoadingComments] = useState(false);
+    const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
     const fetchFeed = async () => {
         try {

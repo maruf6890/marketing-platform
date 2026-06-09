@@ -1,0 +1,1 @@
+ALTER TABLE post_analytics MODIFY user_id INT NOT NULL;
