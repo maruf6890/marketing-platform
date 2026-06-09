@@ -966,7 +966,7 @@ export const getPostAnalytics = async (req, res) => {
 
     const [rows] = await pool.query(
       `
-      SELECT access_token,asset_id
+      SELECT name, access_token, asset_id
       FROM user_platform_assets WHERE id = ?
       `,
       [pageId],
@@ -1056,7 +1056,7 @@ export const getPostAnalytics = async (req, res) => {
     const [analyticsRows] = await pool.query(
       `
       INSERT INTO post_analytics (user_id,platform_post_id, platform_name,total_reactions,total_comments,total_shares,description,response_summary,comment_insights,marketing_suggestions,sentiment_summary,content_recommendations,performance_label)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       on duplicate key update
       platform_post_id = VALUES(platform_post_id)
       `,
