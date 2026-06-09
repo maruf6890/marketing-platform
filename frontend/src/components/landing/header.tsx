@@ -1,50 +1,53 @@
 
 
 import { buttonVariants } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-
+import { AreaChart, Menu } from "lucide-react";
+import Link from "next/link";
 
 export default function Header() {
   return (
-    <header className="w-full border-b bg-background">
-      <div className="mx-auto flex max-w-7xl items-center justify-between p-4">
-        Logo
-        <div className="hidden md:inline-flex">
-          <a
-            href="#"
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+          <AreaChart className="h-6 w-6 text-primary" />
+          <span>Marketo</span>
+        </Link>
+        <div className="hidden md:flex md:items-center md:gap-2">
+          <Link
+            href="#features"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             Features
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            href="#testimonials"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
+            Testimonials
+          </Link>
+          <Link
+            href="#pricing"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             Pricing
-          </a>
-          <a
-            href="#"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            Blog
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            href="#about"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             Company
-          </a>
+          </Link>
         </div>
-        <div className="hidden items-center gap-1 md:flex">
-          <a
-            href="#"
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
+        <div className="hidden items-center gap-4 md:flex">
+          <Link
+            href="/auth/login"
+            className="text-sm font-medium hover:underline underline-offset-4"
           >
             Sign in
-          </a>
-          <a href="#" className={buttonVariants({ size: "sm" })}>
+          </Link>
+          <Link href="/auth/register" className={buttonVariants({ size: "sm" })}>
             Get Started
-          </a>
+          </Link>
         </div>
         <button className="inline-flex p-1.5 md:hidden">
           <Menu />

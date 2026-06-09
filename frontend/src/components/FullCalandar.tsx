@@ -94,6 +94,7 @@ export type CalendarEvent = {
   media_count?: number;
   asset_id?: string;
   asset_name?: string;
+  asset_type?: string;
   asset_url?: string;
   status?: string;
   color?: VariantProps<typeof monthEventVariants>["variant"];
