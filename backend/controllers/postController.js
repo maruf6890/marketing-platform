@@ -42,8 +42,8 @@ export const getPostById = async (req, res) => {
       `
       SELECT p.id, p.content, p.status, p.scheduled_at, p.platform_asset_id AS asset_id, pa.name AS asset_name, pa.type AS asset_type
       FROM posts p
-      LEFT JOIN platform_assets pa ON p.platform_asset_id = pa.id
-      WHERE id = ? AND user_id = ?
+      LEFT JOIN user_platform_assets pa ON p.platform_asset_id = pa.id
+      WHERE p.id = ? AND p.user_id = ?
       `,
       [postId, userId],
     );
