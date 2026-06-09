@@ -69,18 +69,9 @@ const data = {
     },
     {
       title: "Analytics",
-      url: "#",
+      url: "/admin/analytics",
       icon: Bot,
-      items: [
-        {
-          title: "Post Overview",
-          url: "#",
-        },
-        {
-          title: "Generated Reports",
-          url: "#",
-        }
-      ],
+      children: undefined,
     },
     {
       title: "Integrations",

@@ -185,7 +185,7 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
         </div>
 
         {/* Empty */}
-        { pages.length === 0 && (
+        {pages.length === 0 && (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
             No scheduled posts found.
           </div>
@@ -200,24 +200,24 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
             >
               <div className="space-y-1">
                 {/* Header with ID and Date */}
+                <div>
+                  <p className="text-xs flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground p-1 rounded-md text-xs flex items-center gap-1">
+                      {scheduled.type === "facebook_page" ? (
+                        <Facebook className="size-4" />
+                      ) : (
+                        <Instagram className="size-4" />
+                      )}
+                    </span>
+                    <span className="truncate capitalize text-base">{scheduled.name}</span>
+                  </p>
+                </div>
                 {scheduled.scheduled_at && (
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="text-sm text-muted-foreground flex items-center gap-1">
                         <Calendar className="size-4" />{" "}
                         {format(new Date(scheduled.scheduled_at), "PP")}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs flex items-center gap-1">        
-                          <span className="bg-primary text-primary-foreground p-1 rounded-md text-xs flex items-center gap-1">
-                            {scheduled.type === "facebook_page" ? (
-                              <Facebook className="size-4" />
-                            ) : (
-                              <Instagram className="size-4" />
-                            )}
-                          </span>
-                          <span className="truncate">{scheduled.name}</span>
                       </p>
                     </div>
                   </div>
@@ -236,7 +236,7 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
                       .slice(0, 3)
                       .map((url: string, idx: number) => (
                         <Image
-                          key={idx} 
+                          key={idx}
                           height={164}
                           width={164}
                           src={url.trim()}
@@ -261,14 +261,16 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRedirectToCompose(scheduled.id, scheduled.type) }
+                    onClick={() =>
+                      handleRedirectToCompose(scheduled.id, scheduled.type)
+                    }
                   >
                     {redirectingPostId === scheduled.id ? (
                       <span className="flex items-center gap-1">
                         <Loader2 className="animate-spin size-4" /> Loading...
                       </span>
                     ) : (
-                       <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1">
                         <Edit className="size-4" /> Edit
                       </span>
                     )}
@@ -292,7 +294,6 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
             </div>
           ))}
         </div>
-
 
         {/* Publish Modal */}
         <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
@@ -340,27 +341,25 @@ export default function ScheduledPage({ posts }: { posts: Scheduled[] }) {
               </Button>
             </DialogFooter>
           </DialogContent>
-            </Dialog>
-            <DeleteDialog
-                open={isDeleting}
-                loading={pendingDelete}
-                onOpenChange={setIsDeleting}
-                onSubmit={() => {
-                    if (deletingPostId) {
-                        handleDeleteScheduled(deletingPostId);
-                    }
-                }}
-                onClose={() => {
-                     setIsDeleting(false);
-                     setDeletingPostId(null);
-                }}
-           
-                title="Confirm Deletion"
-                description="Are you sure you want to delete this scheduled post? This action cannot be undone."
-                cancelLabel="Cancel"
-                submitLabel="Delete"
-            />  
-            
+        </Dialog>
+        <DeleteDialog
+          open={isDeleting}
+          loading={pendingDelete}
+          onOpenChange={setIsDeleting}
+          onSubmit={() => {
+            if (deletingPostId) {
+              handleDeleteScheduled(deletingPostId);
+            }
+          }}
+          onClose={() => {
+            setIsDeleting(false);
+            setDeletingPostId(null);
+          }}
+          title="Confirm Deletion"
+          description="Are you sure you want to delete this scheduled post? This action cannot be undone."
+          cancelLabel="Cancel"
+          submitLabel="Delete"
+        />
       </div>
     );
 }

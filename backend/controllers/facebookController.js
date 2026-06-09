@@ -946,14 +946,15 @@ export const getPostAnalytics = async (req, res) => {
       [postId, userId],
     );
     // if exist then delete the old analytics to insert the new one
-    if (postRows.length > 0 && force_regenerate === "true") {
+    if (postRows.length > 0) {
       const analyticsId = postRows[0].id;
       if (force_regenerate === "false") {
         return res.status(200).json({
           success: true,
           message: "Analytics already exists for this post",
           data: {
-            analyticsId: analyticsId,
+            analytics_id: analyticsId,
+            is_updated: false,
           },
         });
       }
@@ -1115,11 +1116,8 @@ export const getPostAnalytics = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        total_reactions: result.total_reactions,
-        total_comments: result.total_comments,
-        total_shares: result.total_shares,
-        description: postDetails.data.message || "No description available",
-        analytics: aiResponse.data.analytics,
+        analytics_id: analyticsId,
+        is_updated:true,
       },
       message: "Post analytics retrieved successfully",
     });
@@ -1138,7 +1136,7 @@ export const getPostAnalyticsById = async (req, res) => {
   try {
     const { analyticsId } = req.params;
     const [rows] = await pool.query(
-      `select id,post_id,platform_post_id,platform_name,total_reactions,content_recommendations,total_shares,total_comments,comment_insights,response_summary,marketing_suggestions,sentiment_summary,performance_label,description from post_analytics  where platform_post_id =  ? and user_id = ?`,
+      `select id,post_id,platform_post_id,platform_name,total_reactions,content_recommendations,total_shares,total_comments,comment_insights,response_summary,marketing_suggestions,sentiment_summary,performance_label,description from post_analytics  where id =  ? and user_id = ?`,
       [analyticsId, userId],
     );
     console.log("Single analytics retrieved from database:", rows);

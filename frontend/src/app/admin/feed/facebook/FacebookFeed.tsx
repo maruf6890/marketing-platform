@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect} from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, MessageSquare, BarChart } from "lucide-react";
+import { RefreshCw, MessageSquare, BarChart, Loader2 } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -12,6 +12,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { private_api_call } from "@/actions/parivate_api_calll";
 import { toast } from "sonner";
+import AnalyticsStartModal from "./AnalyticsStartModal";
+import { useRouter } from "next/navigation";
 
 type Post = {
     id: string;
@@ -69,7 +71,10 @@ export default function FacebookFeedPage() {
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
     const [loadingComments, setLoadingComments] = useState(false);
-    const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+    const [loadingAnalytics, setLoadingAnalytics] = useState<string | null>(null);
+    const [openAnalyticsModal, setOpenAnalyticsModal] = useState(false);
+  const [selectedPostForAnalytics, setSelectedPostForAnalytics] = useState<Post | null>(null);
+  const router = useRouter();
 
     const fetchFeed = async () => {
         try {
@@ -81,8 +86,8 @@ export default function FacebookFeedPage() {
             });
 
             if (response.success) {
-                toast.success("Facebook feed loaded successfully!");
-                setPosts(response.data);
+              setPosts(response.data);
+              
             } else {
                 toast.error(response.message);
                 console.error("Failed to fetch feed:", response.message);
@@ -93,7 +98,8 @@ export default function FacebookFeedPage() {
         } finally {
             setLoading(false);
         }
-    };
+  };
+   
 
     const handleLoadComments = async (post: Post) => {
         try {
@@ -124,18 +130,34 @@ export default function FacebookFeedPage() {
         } finally {
             setLoadingComments(false);
         }
-    };
-    const createAnalytics = async (post: Post) => { 
+  };
+
+    const createAnalytics = async (post: Post, force: boolean) => { 
         console.log("Creating analytics for post:", post);
-        try {
+      try {
+            setLoadingAnalytics(post.id);
             const response = await private_api_call({
-                path: `facebook/analytics/${post.page_id}/${post.id}`,
-                method: "GET",
+              path: `facebook/analytics/${post.page_id}/${post.id}?force_regenerate=${force}`,
+              method: "GET",
             });
 
             if (response.success) {
-                toast.success("Post analytics loaded successfully!");
                 console.log("Analytics data:", response.data);
+                setSelectedPostForAnalytics(null);
+                setOpenAnalyticsModal(false);
+                toast(response.message || "Analytics generated successfully!", {
+                  description: response.data.is_updated ? "A new analytics report has been generated based on the latest data." : "Existing analytics report loaded.",
+                  action: {
+                    label: "View Analytics",
+                    onClick: () => {
+                      if (response.data.analytics_id) {
+                        router.push(`/admin/analytics/${response.data.analytics_id}`);
+                      }
+                    },
+                  },
+                });
+             
+              
             } else {
                 toast.error(response.message || "Failed to load post analytics");
                 console.error("Failed to fetch analytics:", response.message);
@@ -143,7 +165,11 @@ export default function FacebookFeedPage() {
         } catch (error) {
             console.error(error);
             toast.error("Failed to load post analytics");
-        }
+      }
+      finally {
+        setLoadingAnalytics(null);
+      
+      }
     };
 
 
@@ -156,7 +182,10 @@ export default function FacebookFeedPage() {
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString() + " " + date.toLocaleTimeString();
-    };
+  };
+  useEffect(() => {
+    fetchFeed();
+  }, [])
 
     return (
       <div className="space-y-6 p-6">
@@ -173,11 +202,17 @@ export default function FacebookFeedPage() {
             <RefreshCw
               className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
             />
-            {loading ? "Loading..." : "Load Feed"}
+            {loading ? "Loading..." : "Refresh Feed"}
           </Button>
         </div>
 
-        {/* Empty State */}
+        {loading && (
+          <div className="flex items-center justify-center min-h-[200px] py-10">
+            <h1 className="text-2xl font-bold text-muted-foreground flex items-center gap-4">
+              <Loader2 className="size-8 animate-spin text-muted-foreground" /> Loading posts...
+            </h1>
+          </div>
+        )}
         {!loading && posts.length === 0 && (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">
             No posts found. Click Load Feed to fetch posts from your pages.
@@ -251,12 +286,25 @@ export default function FacebookFeedPage() {
                     Load Comments
                   </Button>
                   <Button
+                    disabled={loadingAnalytics === post.id}
                     variant="outline"
                     size="sm"
-                    onClick={() => createAnalytics(post)}
+                    onClick={() => {
+                      setOpenAnalyticsModal(true);
+                      setSelectedPostForAnalytics(post);
+                    }}
                   >
-                    <BarChart className="mr-2 h-4 w-4" />
-                    Create Analytics
+                    {loadingAnalytics === post.id ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading Analytics...
+                      </>
+                    ) : (
+                      <>
+                        <BarChart className="mr-2 h-4 w-4" />
+                        Create Analytics
+                      </>
+                    )}
                   </Button>
                   {post.permalink_url && (
                     <Button variant="outline" size="sm" asChild>
@@ -274,6 +322,23 @@ export default function FacebookFeedPage() {
             </div>
           ))}
         </div>
+        <AnalyticsStartModal
+          open={openAnalyticsModal}
+          onOpenChange={(open) => {
+            setOpenAnalyticsModal(open);
+            if (!open) {
+              setSelectedPostForAnalytics(null);
+              setLoadingAnalytics(null);
+              
+            }
+          }}
+          onGenerate={(force: boolean) => {
+            if (selectedPostForAnalytics) {
+              createAnalytics(selectedPostForAnalytics, force);
+            }
+          }}
+          loading={loadingAnalytics === selectedPostForAnalytics?.id}
+        />
 
         {/* Comments Modal */}
         <Dialog

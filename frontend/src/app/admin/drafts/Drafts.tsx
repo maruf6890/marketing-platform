@@ -208,27 +208,32 @@ export default function DraftsPage({ posts }: { posts: Draft[] }) {
           >
             <div className="space-y-1">
               {/* Header with ID and Date */}
+              <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground p-1 rounded-md text-xs flex items-center gap-1">
+                    {draft.type === "facebook_page" ? (
+                      <Facebook className="size-4" />
+                    ) : (
+                      <Instagram className="size-4" />
+                    )}
+                  </span>
+                  <span className="truncate capitalize text-base">
+                    {draft.name}
+                  </span>
+                </p>
+              </div>
               {draft.id && (
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      Draft post - <Hash className="size-4" /> {draft.id}
+                      #Draft-{draft.id}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs flex items-center gap-1">
-                      <span className="bg-primary text-primary-foreground p-1 rounded-md text-xs flex items-center gap-1">
-                        {draft.type === "facebook_page" ? (
-                          <Facebook className="size-4" />
-                        ) : (
-                          <Instagram className="size-4" />
-                        )}
-                      </span>
-                      <span className="truncate">{draft.name}</span>
-                    </p>
-                  </div>
+                  
                 </div>
-              )}
+                )}
+              </div>  
 
               {/* Content */}
               <div className=" ">

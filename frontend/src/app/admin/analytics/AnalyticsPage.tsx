@@ -41,9 +41,9 @@ export interface PostAnalytics {
 export default function AnalyticsPage({ analyticsData }: { analyticsData: PostAnalytics[] }) {
     const [loadingRedirect, setLoadingRedirect] = React.useState(false);
     const router= useRouter();
-    const handleClick = ({ id }: { id: string }) => {
+    const handleClick = ({ id }: { id: number }) => {
         setLoadingRedirect(true);
-        router.push(`/admin/analytics/${id}`);
+        router.push(`/admin/analytics/${id.toString()}`);
     }
     console.log("Rendering AnalyticsPage with data:", analyticsData);
   return (
@@ -174,7 +174,7 @@ export default function AnalyticsPage({ analyticsData }: { analyticsData: PostAn
                 </CardContent>
 
                 <CardFooter>
-                  <Button className="w-full flex gap-2" onClick={() => handleClick({ id: post.platform_post_id })} disabled={loadingRedirect}>
+                  <Button className="w-full flex gap-2" onClick={() => handleClick({ id: post.id })} disabled={loadingRedirect}>
                         {
                     loadingRedirect ? ( <Loader2 className="h-4 w-4 animate-spin" />):  ( <BarChart3 className="h-4 w-4" />)
                   }

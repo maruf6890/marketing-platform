@@ -1,7 +1,6 @@
+import { redirect } from 'next/navigation'
 import ComponentPreview from './component_preview'
 
 export default function page() {
-  return (
-    <ComponentPreview/>
-  )
+  redirect("/admin/compose/facebook")
 }

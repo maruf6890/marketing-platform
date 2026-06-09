@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 import { Asset } from "../../platform/facebook_pages/action";
 import { toast } from "sonner";
-import { CalendarClock, FileText, Loader2, Send } from "lucide-react";
+import { CalendarClock, FileText, Loader2, Send, Sparkles } from "lucide-react";
 import { ai_api_call } from "@/actions/ai_api_call";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -396,7 +396,7 @@ export default function FBPostComposer({ pages, initialPost }: FacebookPageProps
                   onClick={fetchAITags}
                   disabled={!message.trim() || aiLoading}
                 >
-                  {aiLoading ? "..." : "Generate"}
+                  {aiLoading ? <> <Loader2 className="animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4" /> Generate</>}
                 </Button>
               </div>
 
@@ -475,9 +475,9 @@ export default function FBPostComposer({ pages, initialPost }: FacebookPageProps
         image={editingImage?.file ?? null}
         onSave={(editedFile) => {
           if (!editingImage) return;
-          
+
           const preview = URL.createObjectURL(editedFile);
-         
+
           setImages((prev) =>
             prev.map((img) =>
               img.id === editingImage.id
@@ -570,8 +570,8 @@ function ComposerCard({
           </p>
         </div>
 
-        <Button onClick={() => setOpen(true)}>
-          Generate Post
+        <Button className="flex items-center gap-2" onClick={() => setOpen(true)}>
+         <Sparkles className="h-4 w-4" /> Generate Post
         </Button>
       </div>
 
