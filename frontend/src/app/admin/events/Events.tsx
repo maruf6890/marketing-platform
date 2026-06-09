@@ -1,20 +1,43 @@
 "use client";
-import { Calendar, CalendarCurrentDate, CalendarDayView, CalendarEvent, CalendarMonthView, CalendarNextTrigger, CalendarPrevTrigger, CalendarTodayTrigger, CalendarViewTrigger, CalendarWeekView, CalendarYearView } from '@/components/FullCalandar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { format } from 'date-fns/format';
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Globe, ImageIcon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import {
+  Calendar,
+  CalendarCurrentDate,
+  CalendarDayView,
+  CalendarEvent,
+  CalendarMonthView,
+  CalendarNextTrigger,
+  CalendarPrevTrigger,
+  CalendarTodayTrigger,
+  CalendarViewTrigger,
+  CalendarWeekView,
+  CalendarYearView,
+} from "@/components/FullCalandar";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { format } from "date-fns/format";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import React from 'react'
+import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Overlay } from 'vaul';
 
 export default function Events({ events }: { events: CalendarEvent[] }) {
   const [selectedEvent, setSelectedEvent] = React.useState<CalendarEvent | null>(null);
   const router = useRouter();
-
-
 
   return (
     <div>
@@ -28,29 +51,12 @@ export default function Events({ events }: { events: CalendarEvent[] }) {
       >
         <div className="h-dvh py-6 flex flex-col">
           <div className="flex px-6 items-center gap-2 mb-6">
-            <CalendarViewTrigger
-              className="aria-[current=true]:bg-accent"
-              view="day"
-            >
-              Day
-            </CalendarViewTrigger>
-            <CalendarViewTrigger
-              view="week"
-              className="aria-[current=true]:bg-accent"
-            >
-              Week
-            </CalendarViewTrigger>
+            
             <CalendarViewTrigger
               view="month"
-              className="aria-[current=true]:bg-accent"
+              className="aria-current:bg-accent"
             >
               Month
-            </CalendarViewTrigger>
-            <CalendarViewTrigger
-              view="year"
-              className="aria-[current=true]:bg-accent"
-            >
-              Year
             </CalendarViewTrigger>
 
             <span className="flex-1" />
@@ -100,9 +106,15 @@ export default function Events({ events }: { events: CalendarEvent[] }) {
           <div className="space-y-5 p-6">
             {/* Page */}
             <div className="flex items-start gap-3">
-              <Globe className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              {selectedEvent?.asset_type == "facebook_page" ? (
+                <FaFacebook className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              ) : (
+                <FaInstagram className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              )}
               <div>
-                <p className="text-xs text-muted-foreground">Facebook Page</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedEvent?.asset_type == "facebook_page" ? "Facebook Page" : "Instagram Account"}
+                </p>
                 <p className="font-medium">{selectedEvent?.asset_name}</p>
               </div>
             </div>

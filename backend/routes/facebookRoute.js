@@ -1,5 +1,6 @@
 import express from "express"
 import { isAuthenticated } from "../middleware/isAuthenticated.js"
+import { Logger } from "../middleware/logger.js";
 import {
   reqUsersPageList,
   getUsersPageList,

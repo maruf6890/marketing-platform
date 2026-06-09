@@ -1,59 +1,62 @@
 import {
-  Blocks,
+  CalendarDays,
   Bot,
   ChartPie,
-  Film,
+  FolderOpen,
   MessageCircle,
-  Settings2,
+  Share2,
 } from "lucide-react";
 
 const features = [
   {
-    icon: Settings2,
-    title: "Customizable Layouts",
+    icon: CalendarDays,
+    title: "Visual Content Calendar",
     description:
-      "Design your space with drag-and-drop simplicity—create grids, lists, or galleries in seconds.",
+      "Plan your strategy with a drag-and-drop calendar view. easily schedule posts weeks in advance.",
   },
   {
-    icon: Blocks,
-    title: "Interactive Widgets",
+    icon: Share2,
+    title: "Multi-Channel Scheduling",
     description:
-      "Embed polls, quizzes, or forms to keep your audience engaged.",
+      "Schedule and publish posts across all major social networks simultaneously from one dashboard.",
   },
   {
     icon: Bot,
-    title: "AI-Powered Tools",
+    title: "AI-Powered Assistant",
     description:
-      "Generate summaries, auto-format content, or translate into multiple languages seamlessly.",
+      "Overcome writer's block with our smart AI assistant. Generate engaging captions and hashtags instantly.",
   },
   {
-    icon: Film,
-    title: "Media Integrations",
+    icon: FolderOpen,
+    title: "Unified Media Library",
     description:
-      "Connect with Spotify, Instagram, or your own media library for dynamic visuals and sound.",
+      "Store and organize all your creative assets in one central location for your entire team to use.",
   },
   {
     icon: ChartPie,
     title: "Advanced Analytics",
     description:
-      "Track engagement, clicks, and user activity with intuitive charts and reports.",
+      "Track engagement, clicks, follower growth, and ROI with beautiful, easy-to-understand reports.",
   },
   {
     icon: MessageCircle,
-    title: "Seamless Collaboration",
+    title: "Team Collaboration",
     description:
-      "Comment, tag, and assign tasks directly within your documents.",
+      "Review, approve, and manage workflows with your entire marketing team inside the platform.",
   },
 ];
 
 const Features = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center py-12">
-      <div>
-        <h2 className="text-center font-semibold text-4xl tracking-tight sm:text-5xl">
-          Unleash Your Creativity
+    <section id="features" className="flex flex-col items-center justify-center py-24 bg-muted/30">
+      <div className="w-full">
+        <h2 className="text-center font-bold text-4xl tracking-tight sm:text-5xl">
+          Everything you need to grow
         </h2>
-        <div className="mx-auto mt-10 grid max-w-(--breakpoint-lg) gap-6 px-6 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3">
+        <p className="mx-auto mt-4 max-w-2xl text-center text-lg text-muted-foreground">
+          Powerful features designed to help marketers and creators scale their social media presence efficiently.
+        </p>
+        <div className="mx-auto mt-12 grid max-w-(--breakpoint-lg) gap-6 px-6 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => (
             <div
               className="flex flex-col rounded-xl border px-5 py-6"
@@ -70,7 +73,7 @@ const Features = () => {
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

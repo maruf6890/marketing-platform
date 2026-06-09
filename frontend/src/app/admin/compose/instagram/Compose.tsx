@@ -15,7 +15,7 @@ import Image from "next/image";
 import { DateTimePicker } from "@/components/app_inputs/DateTimePicker";
 import { Switch } from "@/components/ui/switch";
 import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
-import { Asset } from "../../platform/facebook_pages/action";
+import { Asset } from "../../platform/instagram_accounts/action";
 import { toast } from "sonner";
 import { CalendarClock, FileText, Loader2, Send } from "lucide-react";
 import { ai_api_call } from "@/actions/ai_api_call";

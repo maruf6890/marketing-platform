@@ -6,15 +6,12 @@ import {
   Calendar,
   CalendarClock,
   FileText,
-  // Frame,
-  // Map,
   Pen,
-  // PieChart,
   Unplug,
+  Zap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-// import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { private_api_call } from "@/actions/parivate_api_calll"
 import {
@@ -147,13 +144,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        App Logo
-        {/* <TeamSwitcher teams={data.teams} /> */}
+      <SidebarHeader className="flex items-center gap-3 justify-center px-4 py-6 bg-linear-to-r from-blue-500/10 to-purple-500/10 border-b">
+        <div className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-950 p-2 shadow-sm">
+          <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div className="group-data-[collapsible=icon]:hidden">
+          <h1 className="font-bold text-lg text-blue-700">Marketo</h1>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

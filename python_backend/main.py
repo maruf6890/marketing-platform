@@ -458,7 +458,7 @@ Output ONLY the Facebook post. No explanations.
             "data": {
                 "post_text": data.post_text,
             },
-            "message": "Facebook post generated successfully."
+            "message": "Post generated successfully."
         }
 
     except Exception as e:
