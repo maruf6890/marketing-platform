@@ -39,7 +39,12 @@ export const getPostById = async (req, res) => {
     const { postId } = req.params;
     // Check if post exists and belongs to user
     const [postRows] = await pool.query(
-      `SELECT id, content, status, scheduled_at FROM posts WHERE id = ? AND user_id = ?`,
+      `
+      SELECT p.id, p.content, p.status, p.scheduled_at, p.platform_asset_id AS asset_id, pa.name AS asset_name, pa.type AS asset_type
+      FROM posts p
+      LEFT JOIN platform_assets pa ON p.platform_asset_id = pa.id
+      WHERE id = ? AND user_id = ?
+      `,
       [postId, userId],
     );
     if (postRows.length === 0) {
@@ -92,6 +97,7 @@ export const getPosts = async (req, res) => {
         p.id,
         p.content,
         p.status,
+        pa.name AS asset_name, p.platform_asset_id AS asset_id, pa.type AS asset_type,
 
         CASE
           WHEN p.status = 'scheduled' THEN p.scheduled_at
@@ -104,6 +110,7 @@ export const getPosts = async (req, res) => {
          WHERE media.post_id = p.id) AS media_count
 
       FROM posts p
+      LEFT JOIN user_platform_assets pa ON p.platform_asset_id = pa.id
       WHERE p.user_id = ?
     `;
 

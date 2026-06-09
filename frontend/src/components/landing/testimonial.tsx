@@ -47,9 +47,9 @@ const testimonials = [
 
 const Testimonials = () => {
   return (
-    <div className="mx-auto max-w-screen-xl px-6 py-12 sm:py-14">
-      <h2 className="text-balance text-center font-semibold text-4xl tracking-tight sm:text-5xl">
-        Testimonials
+    <div id="testimonials" className="mx-auto max-w-screen-xl px-6 py-20 sm:py-24">
+      <h2 className="text-balance text-center font-bold text-4xl tracking-tight sm:text-5xl">
+        Loved by Marketers
       </h2>
       <p className="mt-2.5 text-balance text-center text-lg text-muted-foreground tracking-normal sm:text-2xl">
         What our customers say about us

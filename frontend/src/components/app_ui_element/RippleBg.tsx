@@ -21,27 +21,15 @@ export function Ripple({
   mainCircleSize = 210,
   mainCircleOpacity = 0.24,
   numCircles = 8,
-  color = "rgba(255, 255, 255, 0.8)",
+  color = "currentColor",
 }: RippleProps) {
   return (
     <div
       className={cn(
-        " inset-0 -z-10 overflow-hidden bg-neutral-950 h-96 mt-20",
+        "relative flex min-h-[600px] w-full flex-col items-center justify-center overflow-hidden bg-background py-20 text-foreground",
         className,
       )}
     >
-      {/* Keyframe animation */}
-      <style>{`
-        @keyframes ripple-pulse {
-          0%, 100% {
-            transform: translate(-50%, -50%) scale(1);
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(0.9);
-          }
-        }
-      `}</style>
-
       {/* Ripple container with radial fade mask */}
       <div
         className="pointer-events-none absolute inset-0 select-none"
@@ -67,9 +55,9 @@ export function Ripple({
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%) scale(1)",
-                border: `1px solid ${color}`,
-                backgroundColor: `${color.replace(/[\d.]+\)$/, "0.1)")}`,
-                boxShadow: `0 0 20px ${color.replace(/[\d.]+\)$/, "0.1)")}`,
+                border: `1px solid hsl(var(--foreground) / ${opacity})`,
+                backgroundColor: `hsl(var(--foreground) / 0.05)`,
+                boxShadow: `0 0 20px hsl(var(--foreground) / 0.05)`,
                 animation: "ripple-pulse 2s ease-in-out infinite",
                 animationDelay: `${i * 0.06}s`,
               }}

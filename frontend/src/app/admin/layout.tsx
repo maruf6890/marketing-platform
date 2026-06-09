@@ -13,7 +13,15 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-export default function Page({children}: {children: React.ReactNode }) {
+import { getCookie } from "@/lib/cookies";
+import { redirect } from "next/navigation";
+
+export default async function Page({children}: {children: React.ReactNode }) {
+
+  const token = await getCookie("token");
+  console.log("token", token);
+  if(!token) redirect("/auth/login")
+
   return (
     <SidebarProvider>
       <AppSidebar />

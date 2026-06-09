@@ -1,8 +1,6 @@
 
 "use client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Grid2X2Check } from "lucide-react";
 import TextInput from "../app_inputs/text_input";
@@ -13,7 +11,6 @@ import { toast } from "sonner";
 import { setCookie } from "@/lib/cookies";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
 
 export default function LoginForm() {
   const router = useRouter();

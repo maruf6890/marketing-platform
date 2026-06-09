@@ -11,8 +11,6 @@ import { BASE_URL } from "@/lib/const";
 import { setCookie } from "@/lib/cookies";
 import { useRouter } from "next/navigation";
 
-
-
 export default function SignUpForm() {
   const [formData, setFormData] = useState({
     user_name: "",
@@ -57,12 +55,10 @@ export default function SignUpForm() {
       }
       
       resetData();
-       router.push("/admin"); 
+       router.push("/admin/compose/facebook"); 
     } else {
       console.error(result.message || "Failed to create account");
       toast.error(result.message || "Failed to create account. Please try again.");
-     
-      
     }
     setLoading(false);
   }
