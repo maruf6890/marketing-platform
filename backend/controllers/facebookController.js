@@ -906,3 +906,232 @@ export const editPost = async (req, res) => {
     });
   }
 };
+function extractReplies(comment) {
+  const replies = comment.comments?.data || comment.replies || [];
+
+  return replies.map((reply) => ({
+    id: reply.id,
+    message: reply.message,
+    created_time: reply.created_time,
+    comment_by: reply.from,
+
+    // 🔥 recursion happens here
+    replies: extractReplies(reply),
+  }));
+}
+function formatComments(comments = []) {
+  return comments.map((comment) => ({
+    id: comment.id,
+    message: comment.message,
+    created_time: comment.created_time,
+    comment_by: comment.from,
+    replies: extractReplies(comment),
+  }));
+}
+
+function formatMySQLDate(dateStr) {
+  const date = new Date(dateStr);
+  return date.toISOString().slice(0, 19).replace("T", " ");
+}
+//analytics for facebook post
+export const getPostAnalytics = async (req, res) => {
+  try {
+    const { postId, pageId } = req.params;
+
+    //check if the post exists in database
+    const [postRows] = await pool.query(
+      `SELECT id FROM post_analytics WHERE  platform_post_id= ?`,
+      [postId]
+    );
+    // if exist then delete the old analytics to insert the new one
+    if (postRows.length > 0) {
+      await pool.query( 
+        `DELETE FROM post_analytics WHERE platform_post_id = ?`,
+        [postId]
+      );
+    }
+
+
+    const [rows] = await pool.query(
+      `
+      SELECT access_token,asset_id
+      FROM user_platform_assets WHERE id = ?
+      `,
+      [pageId],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "Page not found",
+      });
+    }
+    console.log("Retrieved page access token:", rows[0].access_token);
+
+
+
+    const pageAccessToken = rows[0]?.access_token;
+    const pageAssetId = rows[0]?.asset_id;
+    const pageName = rows[0]?.name || "Unknown Page";
+
+    //retrive facebook post insights
+    const post = await axios.get(
+      `https://graph.facebook.com/v25.0/${postId}`,
+      {
+        params: {
+          access_token: pageAccessToken,
+          fields: "reactions.summary(true),comments.summary(true),shares",
+        },
+      },
+    );
+
+
+
+    const result = {
+      postId: post.data.id || null,
+      total_reactions: post.data.reactions?.summary?.total_count ?? 0,
+      total_comments: post.data.comments?.summary?.total_count ?? 0,
+      total_shares: post.data.shares?.count ?? 0,
+    }
+
+      const CommentResponse = await axios.get(
+        `https://graph.facebook.com/v25.0/${postId}/comments`,
+        {
+          params: {
+            access_token: pageAccessToken,
+            fields:
+              "id,message,created_time,from.fields(id,name),comments.limit(50){id,message,created_time,from.fields(id,name)}",
+            limit: 100,
+          },
+        },
+      );
+
+    result.comments = formatComments(CommentResponse.data.data) || [];
+    //get post details    
+    const postDetails = await axios.get(
+      `https://graph.facebook.com/v25.0/${postId}`,
+      {
+        params: {
+          access_token: pageAccessToken,
+          fields: "message,created_time,permalink_url",
+        },
+      },
+    );
+    console.log("postDetails.data", postDetails.data);
+
+
+
+    console.log("Post analytics result:", {
+      comments: result.comments,
+      reaction_count: result.total_reactions,
+      share_count: result.total_shares,
+      comment_count: result.total_comments,
+      description: postDetails.data || "No description available",
+      platform: "facebook",
+      page_name: pageName,
+    });
+    const aiResponse = await axios.post(
+      `http://127.0.0.1:8000/api/v1/generate/analytics`,
+      {
+        comments: result.comments,
+        reaction_count: result.total_reactions,
+        share_count: result.total_shares,
+        comment_count: result.total_comments,
+        description: postDetails.data.message || "No description available",
+        platform: "facebook",
+        page_name: pageName,
+      },
+    );
+    console.log("AI Response:", aiResponse.data); 
+    
+    if (!aiResponse.data.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate analytics",
+      });
+    }
+const analyticsData = aiResponse.data.data.analytics;
+  const [analyticsRows]=  await pool.query(
+      `
+      INSERT INTO post_analytics (platform_post_id, platform_name,total_reactions,total_comments,total_shares,description,response_summary,comment_insights,marketing_suggestions,sentiment_summary,content_recommendations,performance_label)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      on duplicate key update
+      platform_post_id = VALUES(platform_post_id)
+      `,
+      [
+        postId,
+        pageName,
+        result.total_reactions,
+        result.total_comments,
+        result.total_shares,
+        postDetails.data.message || "No description available",
+        analyticsData.response_summary,
+        analyticsData.comments_summary,
+        analyticsData.marketing_recommendations,
+        analyticsData.sentiment_summary,
+        analyticsData.content_recommendations,
+        analyticsData.performance_label,
+      ],
+    );
+    const analyticsId = analyticsRows.insertId;
+
+    // Return analytics result
+    if (
+      aiResponse.data.data.comment_insights &&
+      aiResponse.data.data.comment_insights.comments.length > 0
+    ) {
+      //insert all the comments analytics into database with post id and comment id
+      const commentInsights = aiResponse.data.data.comment_insights.comments || [];
+     for (const insight of commentInsights) {
+       await pool.query(
+         `INSERT INTO comments (
+      platform_comment_id,
+      analytics_id,
+      user_name,
+      message,
+      message_summary,
+      sentiment,
+      priority,
+      created_time
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         [
+           insight.comment_id,
+           analyticsId,
+           insight.user_name,
+           insight.message,
+           insight.message_summary,
+           insight.sentiment,
+           insight.priority,
+           formatMySQLDate(insight.created_time),
+         ],
+       );
+     }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        total_reactions: result.total_reactions,
+        total_comments: result.total_comments,
+        total_shares: result.total_shares,
+        description: postDetails.data.message || "No description available",
+        analytics: aiResponse.data.analytics,
+      },
+      message: "Post analytics retrieved successfully",
+    });
+
+    
+      
+
+
+    
+  } catch (error) {
+    console.error(error.response?.data || error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+
+
+
+
+};
