@@ -12,6 +12,8 @@ import {
   getPostComments,
   editPost,
   getPostAnalytics,
+  getListOfPostAnalytics,
+  getPostAnalyticsById
 } from "../controllers/facebookController.js";
 
 
@@ -26,6 +28,8 @@ router.get("/scheduled_posts", isAuthenticated, getScheduledPosts);
 router.get("/feed", isAuthenticated, getFacebookFeed);
 router.post("/comments/:postId", isAuthenticated, getPostComments);
 router.get("/analytics/:pageId/:postId", isAuthenticated, getPostAnalytics);
+router.get("/analytics", isAuthenticated, getListOfPostAnalytics);
+router.get("/analytics/:analyticsId", isAuthenticated, getPostAnalyticsById);
 export default router
 
 

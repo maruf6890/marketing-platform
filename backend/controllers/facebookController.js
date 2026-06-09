@@ -699,8 +699,8 @@ export const getPostById = async (req, res) => {
 export const editPost = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { postId} = req.params;
-    if (!postId){
+    const { postId } = req.params;
+    if (!postId) {
       return res.status(400).json({
         success: false,
         message: "Post ID is required",
@@ -937,20 +937,32 @@ function formatMySQLDate(dateStr) {
 export const getPostAnalytics = async (req, res) => {
   try {
     const { postId, pageId } = req.params;
+    const { force_regenerate = false } = req.query;
+    const userId = req.user.id;
 
     //check if the post exists in database
     const [postRows] = await pool.query(
-      `SELECT id FROM post_analytics WHERE  platform_post_id= ?`,
-      [postId]
+      `SELECT id FROM post_analytics WHERE  platform_post_id= ? and user_id = ?`,
+      [postId, userId],
     );
     // if exist then delete the old analytics to insert the new one
-    if (postRows.length > 0) {
-      await pool.query( 
+    if (postRows.length > 0 && force_regenerate === "true") {
+      const analyticsId = postRows[0].id;
+      if (force_regenerate === "false") {
+        return res.status(200).json({
+          success: true,
+          message: "Analytics already exists for this post",
+          data: {
+            analyticsId: analyticsId,
+          },
+        });
+      }
+
+      await pool.query(
         `DELETE FROM post_analytics WHERE platform_post_id = ?`,
-        [postId]
+        [postId],
       );
     }
-
 
     const [rows] = await pool.query(
       `
@@ -966,46 +978,39 @@ export const getPostAnalytics = async (req, res) => {
     }
     console.log("Retrieved page access token:", rows[0].access_token);
 
-
-
     const pageAccessToken = rows[0]?.access_token;
     const pageAssetId = rows[0]?.asset_id;
     const pageName = rows[0]?.name || "Unknown Page";
 
     //retrive facebook post insights
-    const post = await axios.get(
-      `https://graph.facebook.com/v25.0/${postId}`,
-      {
-        params: {
-          access_token: pageAccessToken,
-          fields: "reactions.summary(true),comments.summary(true),shares",
-        },
+    const post = await axios.get(`https://graph.facebook.com/v25.0/${postId}`, {
+      params: {
+        access_token: pageAccessToken,
+        fields: "reactions.summary(true),comments.summary(true),shares",
       },
-    );
-
-
+    });
 
     const result = {
       postId: post.data.id || null,
       total_reactions: post.data.reactions?.summary?.total_count ?? 0,
       total_comments: post.data.comments?.summary?.total_count ?? 0,
       total_shares: post.data.shares?.count ?? 0,
-    }
+    };
 
-      const CommentResponse = await axios.get(
-        `https://graph.facebook.com/v25.0/${postId}/comments`,
-        {
-          params: {
-            access_token: pageAccessToken,
-            fields:
-              "id,message,created_time,from.fields(id,name),comments.limit(50){id,message,created_time,from.fields(id,name)}",
-            limit: 100,
-          },
+    const CommentResponse = await axios.get(
+      `https://graph.facebook.com/v25.0/${postId}/comments`,
+      {
+        params: {
+          access_token: pageAccessToken,
+          fields:
+            "id,message,created_time,from.fields(id,name),comments.limit(50){id,message,created_time,from.fields(id,name)}",
+          limit: 100,
         },
-      );
+      },
+    );
 
     result.comments = formatComments(CommentResponse.data.data) || [];
-    //get post details    
+    //get post details
     const postDetails = await axios.get(
       `https://graph.facebook.com/v25.0/${postId}`,
       {
@@ -1016,8 +1021,6 @@ export const getPostAnalytics = async (req, res) => {
       },
     );
     console.log("postDetails.data", postDetails.data);
-
-
 
     console.log("Post analytics result:", {
       comments: result.comments,
@@ -1040,23 +1043,25 @@ export const getPostAnalytics = async (req, res) => {
         page_name: pageName,
       },
     );
-    console.log("AI Response:", aiResponse.data); 
-    
+    console.log("AI Response:", aiResponse.data);
+
     if (!aiResponse.data.success) {
       return res.status(500).json({
         success: false,
         message: "Failed to generate analytics",
       });
     }
-const analyticsData = aiResponse.data.data.analytics;
-  const [analyticsRows]=  await pool.query(
+    const analyticsData = aiResponse.data.data.analytics;
+
+    const [analyticsRows] = await pool.query(
       `
-      INSERT INTO post_analytics (platform_post_id, platform_name,total_reactions,total_comments,total_shares,description,response_summary,comment_insights,marketing_suggestions,sentiment_summary,content_recommendations,performance_label)
+      INSERT INTO post_analytics (user_id,platform_post_id, platform_name,total_reactions,total_comments,total_shares,description,response_summary,comment_insights,marketing_suggestions,sentiment_summary,content_recommendations,performance_label)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       on duplicate key update
       platform_post_id = VALUES(platform_post_id)
       `,
       [
+        userId,
         postId,
         pageName,
         result.total_reactions,
@@ -1079,10 +1084,11 @@ const analyticsData = aiResponse.data.data.analytics;
       aiResponse.data.data.comment_insights.comments.length > 0
     ) {
       //insert all the comments analytics into database with post id and comment id
-      const commentInsights = aiResponse.data.data.comment_insights.comments || [];
-     for (const insight of commentInsights) {
-       await pool.query(
-         `INSERT INTO comments (
+      const commentInsights =
+        aiResponse.data.data.comment_insights.comments || [];
+      for (const insight of commentInsights) {
+        await pool.query(
+          `INSERT INTO comments (
       platform_comment_id,
       analytics_id,
       user_name,
@@ -1092,18 +1098,18 @@ const analyticsData = aiResponse.data.data.analytics;
       priority,
       created_time
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-         [
-           insight.comment_id,
-           analyticsId,
-           insight.user_name,
-           insight.message,
-           insight.message_summary,
-           insight.sentiment,
-           insight.priority,
-           formatMySQLDate(insight.created_time),
-         ],
-       );
-     }
+          [
+            insight.comment_id,
+            analyticsId,
+            insight.user_name,
+            insight.message,
+            insight.message_summary,
+            insight.sentiment,
+            insight.priority,
+            formatMySQLDate(insight.created_time),
+          ],
+        );
+      }
     }
 
     return res.status(200).json({
@@ -1117,12 +1123,6 @@ const analyticsData = aiResponse.data.data.analytics;
       },
       message: "Post analytics retrieved successfully",
     });
-
-    
-      
-
-
-    
   } catch (error) {
     console.error(error.response?.data || error);
     return res.status(500).json({
@@ -1130,8 +1130,74 @@ const analyticsData = aiResponse.data.data.analytics;
       success: false,
     });
   }
-
-
-
-
 };
+
+//get single report by analytics id
+export const getPostAnalyticsById = async (req, res) => {
+  const  userId= req.user.id;
+  try {
+    const { analyticsId } = req.params;
+    const [rows] = await pool.query(
+      `select id,post_id,platform_post_id,platform_name,total_reactions,content_recommendations,total_shares,total_comments,comment_insights,response_summary,marketing_suggestions,sentiment_summary,performance_label,description from post_analytics  where platform_post_id =  ? and user_id = ?`,
+      [analyticsId, userId],
+    );
+    console.log("Single analytics retrieved from database:", rows);
+    console.log("Analytics ID from request params:", analyticsId);
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Analytics not found",
+      });
+    }
+    const analytics = rows[0];
+    const [commentRows] = await pool.query(
+      `select * from comments where analytics_id = ?`,
+      [analytics.id],
+    );
+    analytics.comment_insights = commentRows;
+    return res.status(200).json({
+      success: true,
+      data: analytics,
+      message: "Analytics retrieved successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const getListOfPostAnalytics = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    console.log("Retrieving list of analytics for user ID:", userId);
+    const [rows] = await pool.query(
+      `select id,post_id,platform_post_id,platform_name,total_reactions,last_updated,total_shares,total_comments,performance_label,description from post_analytics  where user_id = ?`,
+      [userId]
+    );
+    console.log("List of analytics retrieved from database:", rows);
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Analytics not found",
+      });
+    }
+  
+    console.log("Single analytics retrieved from database:", rows);
+
+    return res.status(200).json({
+      success: true,
+      data: rows,
+      message: "Analytics retrieved successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
