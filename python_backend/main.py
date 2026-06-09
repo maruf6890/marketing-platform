@@ -5,6 +5,7 @@ FastAPI + LangChain (LCEL) + Google Gemini (NEW SDK)
 
 import base64
 import asyncio
+from enum import Enum
 from typing import List, Optional
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
@@ -107,6 +108,239 @@ class FacebookPostResponse(BaseModel):
 @app.get("/")
 def root():
     return {"service": "SocialAI API", "status": "running"}
+
+
+
+
+
+class User(BaseModel):
+    id: str
+    name: str
+
+
+# 💬 Recursive Comment model
+class Comment(BaseModel):
+    id: str
+    message: str
+    created_time: str
+    comment_by: User = Field(alias="from")
+
+    replies: List["Comment"] = []
+    model_config = {
+        "populate_by_name": True
+    }
+
+Comment.model_rebuild()
+
+class FacebookCommentsRequest(BaseModel):
+    comments: List[Comment]
+    reaction_count: int
+    share_count: int
+    comment_count: int
+    description: str
+    platform: str = "facebook"
+    page_name: str
+
+
+#summary and analytics output formatter
+class PerformanceLabel(str, Enum):
+    viral = "viral"
+    good = "good"
+    average = "average"
+    poor = "poor"
+
+
+class FacebookAnalyticsResponse(BaseModel):
+    response_summary: str = Field(
+        title="Response Summary",
+        description="Overall summary of post performance",
+    )
+
+    comments_summary: str = Field(
+        title="Comments Summary",
+        description="Summary of comments",
+    )
+
+    marketing_recommendations: str = Field(
+        title="Marketing Recommendations",
+        description="Actionable marketing suggestions",
+   
+    )
+
+    sentiment_summary: str = Field(
+        title="Sentiment Summary",
+        description="Overall sentiment analysis",
+
+    )
+
+    content_recommendations: str = Field(
+        title="Content Recommendations",
+        description="Future content suggestions",
+    )
+
+    performance_label: PerformanceLabel = Field(
+        title="Performance Label",
+        description="Post performance classification"
+    )
+
+class Priority(str, Enum):
+    high = "high"
+    medium = "medium"
+    low = "low"
+class CommentsInsightsResponse(BaseModel):
+    user_id: str = Field(
+        title="User ID",
+        description="Unique ID of the user who made the comment"
+    )
+
+    comment_id: str = Field(
+        title="Comment ID",
+        description="Unique identifier of the comment"
+    )
+
+    user_name: str = Field(
+        title="User Name",
+        description="Name of the user who wrote the comment"
+    )
+    original_message: str = Field(
+        title="Original Message",
+        description="The full text of the comment before summarization",
+    )
+    message_summary: str = Field(
+        title="Message Summary",
+        description="Short summarized version of the comment message",
+      
+    )
+
+    sentiment: str = Field(
+        title="Sentiment",
+        description="Sentiment of the comment (positive, negative, neutral)"
+    )
+
+    priority: Priority = Field(
+        title="Priority Level",
+        description="Importance level of the comment for marketing analysis"
+    )
+    created_time: str = Field(
+        title="Created Time",
+        description="Timestamp of when the comment was created"
+    )
+    
+    
+class CommentsInsightsBatchResponse(BaseModel):
+    comments: List[CommentsInsightsResponse]
+@app.post("/api/v1/generate/analytics")
+async def generate_analytics(req: FacebookCommentsRequest):
+
+    llm1 = get_llm().with_structured_output(FacebookAnalyticsResponse)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system",
+        """
+    You are an expert social media analytics and marketing strategist.
+
+    Your job is to analyze Facebook post performance using:
+    - engagement metrics (reactions, shares, comments)
+    - full comment thread (including replies)
+    - post description and context
+
+    You must:
+    1. Generate deep performance insights
+    2. Summarize audience behavior
+    3. Detect sentiment trends
+    4. Extract marketing opportunities
+    5. Recommend content improvements
+    6. Classify performance label accurately
+
+    Rules:
+    - Be precise and data-driven
+    - Do NOT include unrelated information
+    - Keep outputs structured and concise
+    """),
+
+        ("human",
+        """
+    POST ANALYTICS DATA:
+
+    Platform: {platform}
+    Page Name: {page_name}
+    Post Description: {description}
+
+    ENGAGEMENT METRICS:
+    - Reactions: {reaction_count}
+    - Shares: {share_count}
+    - Comments: {comment_count}
+
+    COMMENTS (STRUCTURED):
+    {comments}
+    """)
+    ])
+
+    chain = prompt | llm1
+
+
+    #comment_insights_chain
+    llm2 = get_llm().with_structured_output(CommentsInsightsBatchResponse)
+ 
+    comment_prompt = ChatPromptTemplate.from_messages([
+        ("system",
+        """
+    You are a senior social media intelligence analyst specialized in comment-level behavioral analysis.
+
+    Your task is to analyze individual Facebook comments and extract structured marketing intelligence.
+
+    For EACH comment, you must:
+
+    1. Determine sentiment (positive, negative, neutral)
+    2. Assess priority for marketing value (high, medium, low)
+    - High: strong opinion, complaint, viral potential, buying intent
+    - Medium: meaningful engagement or question
+    - Low: generic reactions, spam, short replies
+    3. Summarize the message into a clean, short insight
+    4. Identify user relevance for marketing analysis
+
+    Rules:
+    - Be objective and data-driven
+    - Do NOT generate fake context beyond the comment
+    - Keep message_summary short and meaningful
+    - Ignore emojis-only or meaningless text unless viral
+    - Return structured output only
+    """),
+
+        ("human",
+        """
+    Analyze the following Facebook comments dataset:
+
+    COMMENTS:
+    {comments}
+    """)
+    ])
+    comment_insights_chain = comment_prompt | llm2
+    try:
+        data = await chain.ainvoke({
+            "platform": req.platform,
+            "page_name": req.page_name,
+            "description": req.description,
+            "reaction_count": req.reaction_count,
+            "share_count": req.share_count,
+            "comment_count": req.comment_count,
+            "comments": req.comments  
+        })
+        comment_insights = await comment_insights_chain.ainvoke({
+            "comments": req.comments
+        })  
+
+  
+        return {
+            "success": True,
+            "data": {
+                "analytics": data,
+                "comment_insights": comment_insights
+            }
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/v1/generate/hashtags")
@@ -229,10 +463,6 @@ Output ONLY the Facebook post. No explanations.
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-# ─────────────────────────────────────────────
-# 3. Image → Content (NEW Gemini SDK)
-# ─────────────────────────────────────────────
-
 
 @app.post("/api/v1/generate/product-photo")
 async def product_photo(
