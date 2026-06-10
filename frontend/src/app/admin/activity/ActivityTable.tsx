@@ -47,7 +47,7 @@ export default function RecentActivitiesTable({ data }: Props) {
                 className="hover:bg-accent/20 transition"
               >
                 <TableCell className="font-medium">
-                  {item.user_name}
+                  {item.name}
                 </TableCell>
 
                 <TableCell>

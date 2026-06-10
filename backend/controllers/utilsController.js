@@ -124,6 +124,7 @@ export const activityAnalytics = async (type, title, description, userId) => {
 };
 
 export const getActivityAnalytics = async (req, res) => {
+ 
   try {
     const userId = req.user.id;
 

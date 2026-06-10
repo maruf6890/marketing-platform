@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 import {
   AreaChart,
@@ -11,134 +17,64 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  Legend,
 } from "recharts";
 
-type Activity = {
-  id: number;
+export type TrendItem = {
+  date: string;
   activity_type: string;
-  title: string;
-  description?: string;
-  user_name: string;
-  created_at: string;
+  total: number;
 };
 
 type ChartRow = {
-  date: string;
-  timestamp: number;
-  login: number;
-  ai_use: number;
-  direct_post: number;
-  draft_post: number;
-  schedule_post: number;
+  label: string;
+  value: number;
 };
 
-const allowedKeys = [
-  "login",
-  "ai_use",
-  "direct_post",
-  "draft_post",
-  "schedule_post",
-] as const;
-
-type Key = (typeof allowedKeys)[number];
-
-export default function ActivityTrend({ data }: { data: Activity[] }) {
+export default function ActivityTrend({
+  data,
+}: {
+  data: TrendItem[];
+}) {
   const chartData: ChartRow[] = useMemo(() => {
-    const map: Record<string, ChartRow> = {};
-
-    data.forEach((item) => {
-      const d = new Date(item.created_at);
-
-      const dateKey = d.toISOString().split("T")[0]; // stable grouping
-      const label = d.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      });
-
-      if (!map[dateKey]) {
-        map[dateKey] = {
-          date: label,
-          timestamp: d.getTime(),
-          login: 0,
-          ai_use: 0,
-          direct_post: 0,
-          draft_post: 0,
-          schedule_post: 0,
-        };
-      }
-
-      const type = item.activity_type as Key;
-
-      if (allowedKeys.includes(type)) {
-        map[dateKey][type]++;
-      }
-    });
-
-    return Object.values(map).sort((a, b) => a.timestamp - b.timestamp);
+    return data.map((item) => ({
+      label: `${item.date} • ${item.activity_type}`,
+      value: item.total,
+    }));
   }, [data]);
 
   return (
     <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-foreground">Activity Trend</CardTitle>
+        <CardTitle>Activity Trend</CardTitle>
       </CardHeader>
 
       <CardContent>
         <div className="h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
+
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
 
               <XAxis
-                dataKey="date"
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                dataKey="label"
+                tick={{ fontSize: 10 }}
+                interval={0}
+                angle={-20}
+                textAnchor="end"
               />
 
-              <YAxis
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-              />
+              <YAxis tick={{ fontSize: 12 }} />
 
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-
-              <Legend />
+              <Tooltip />
 
               <Area
-                dataKey="login"
+                type="monotone"
+                dataKey="value"
                 stroke="#6366f1"
                 fill="#6366f1"
-                name="Login"
+                name="Total Activity"
               />
-              <Area
-                dataKey="ai_use"
-                stroke="#8b5cf6"
-                fill="#8b5cf6"
-                name="AI Uses"
-              />
-              <Area
-                dataKey="direct_post"
-                stroke="#22c55e"
-                fill="#22c55e"
-                name="Direct Posts"
-              />
-              <Area
-                dataKey="draft_post"
-                stroke="#f59e0b"
-                fill="#f59e0b"
-                name="Draft Posts"
-              />
-              <Area
-                dataKey="schedule_post"
-                stroke="#06b6d4"
-                fill="#06b6d4"
-                name="Scheduled Posts"
-              />
+
             </AreaChart>
           </ResponsiveContainer>
         </div>

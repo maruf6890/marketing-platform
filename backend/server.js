@@ -4,6 +4,7 @@ import userRoute from "./routes/userRoute.js"
 import facebookRoute from "./routes/facebookRoute.js";
 import instagramRoute from "./routes/instagramRoute.js";
 import postRoute from "./routes/postRoute.js";
+import { isAuthenticated } from "./middleware/isAuthenticated.js";
 import "./scheduler.js";
 import {
   uploadSingleFile,
@@ -32,7 +33,7 @@ app.use('/posts', postRoute)
 app.post("/upload", upload.single("file"), uploadSingleFile);
 app.post("/upload-multiple", upload.array("files", 10), uploadMultiple);
 app.delete("/media/:publicId", deleteSingle);
-app.get("/analytics", getActivityAnalytics);
+app.get("/analytics", isAuthenticated, getActivityAnalytics);
 app.get("/", (req, res) => {
     res.send("Welcome to the User Authentication API")
 })
