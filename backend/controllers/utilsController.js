@@ -101,3 +101,19 @@ export const deleteFiles = async (publicIds) => {
     throw error;
   }
 }
+
+export const activityAnalytics = async (type, title, description) => {
+  try {
+    await pool.query(
+      `
+    INSERT INTO activities (type, title, description)
+    VALUES (?, ?, ?)
+    `,
+      [type, title, description],
+    );
+
+    console.log("Activity analytucs saved:", type, title, description);
+  } catch (error) {
+    console.error("Error saving activity analytucs:", error);
+  }
+}
