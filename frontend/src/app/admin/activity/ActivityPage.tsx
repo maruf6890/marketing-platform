@@ -1,22 +1,12 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import StatCard from './StatCard';
 import { Brain, CalendarClock, FileEdit, Loader2, LogIn, Send } from 'lucide-react';
 import RecentActivitiesTable from './ActivityTable';
 import ActivityTrend from './ActivityTreand';
 import { private_api_call } from '@/actions/parivate_api_calll';
 import { toast } from 'sonner';
-
-type Activity = {
-  id: number;
-  activity_type: string;
-  title: string;
-  description?: string;
-  user_name: string;
-  created_at: string;
-};
-
 
 export type SummaryItem = {
   activity_type:   string;
@@ -79,28 +69,6 @@ export default function ActivityPage() {
   useEffect(() => {
     fetchActivity();
   }, [])
-    const formatTrendData = (data: TrendItem[]) => {
-      const map: Record<string, any> = {};
-
-      data.forEach((item) => {
-        const date = item.date;
-
-        if (!map[date]) {
-          map[date] = {
-            date,
-            login: 0,
-            ai_use: 0,
-            direct_post: 0,
-            post_draft: 0,
-            scheduled_post: 0,
-          };
-        }
-
-        map[date][item.activity_type] = item.total;
-      });
-
-      return Object.values(map);
-    };
 
   return (
     <div>
@@ -131,7 +99,7 @@ export default function ActivityPage() {
             icon={<Brain />}
             count={
               activities?.summary.find(
-                (item) => item.activity_type === "ai_use",
+                (item) => item.activity_type === "facebook_analytics_generated",
               )?.total_activity || 0
             }
             title="AI Uses"
@@ -140,7 +108,7 @@ export default function ActivityPage() {
             icon={<Send />}
             count={
               activities?.summary.find(
-                (item) => item.activity_type === "direct_post",
+                (item) => item.activity_type === "post_published",
               )?.total_activity || 0
             }
             title="Direct Posts"
@@ -158,7 +126,7 @@ export default function ActivityPage() {
             icon={<CalendarClock />}
             count={
               activities?.summary.find(
-                (item) => item.activity_type === "scheduled_post",
+                (item) => item.activity_type === "post_scheduled",
               )?.total_activity || 0
             }
             title="Scheduled"
