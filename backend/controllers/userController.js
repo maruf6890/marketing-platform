@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../database/db.js";
 import axios from "axios";
+import { activityAnalytics } from "./utilsController.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -142,6 +143,12 @@ export const loginUser = async (req, res) => {
         expiresIn: process.env.JWT_EXPIRES_IN,
       },
     );
+
+    try {
+      activityAnalytics("user_login", `${rows[0].name} logged in`, `User ${rows[0].id} logged in at ${new Date().toISOString()}`)
+    } catch (error) {
+      console.error("Error saving activity analytics:", error);
+    }
 
     return res.status(200).json({
       success: true,

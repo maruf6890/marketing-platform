@@ -1,6 +1,6 @@
 import axios from "axios";
 import { pool } from "../database/db.js";
-import { deleteFiles } from "./utilsController.js";
+import { deleteFiles, activityAnalytics } from "./utilsController.js";
 export const reqUsersPageList = async (req, res) => {
   console.log("Requesting user's Facebook pages...");
   try {
@@ -191,6 +191,13 @@ export const createPost = async (req, res) => {
       }
     }
     if (status === "scheduled" || status === "draft") {
+      try {
+        activityAnalytics(status=="scheduled" ? "post_scheduled" : "post_draft",
+          status == "scheduled" ? `A schedule post created` : `A draft post created`,
+          `${userId} has created a ${status} post on facebook`, userId)
+      } catch (error) {
+        console.error("Error saving activity analytics:", error);
+      }
       return res.status(200).json({
         message: "Post saved successfully",
         success: true,
@@ -218,6 +225,14 @@ export const createPost = async (req, res) => {
               access_token: pageAccessToken,
             },
           );
+
+          try {
+            activityAnalytics("post_published",
+              `A published post created`,
+              `${userId} has published post on facebook`, userId)
+          } catch (error) {
+            console.error("Error saving activity analytics:", error);
+          }
 
           console.log(
             "Facebook API response for single image post:",
@@ -1111,6 +1126,14 @@ export const getPostAnalytics = async (req, res) => {
           ],
         );
       }
+    }
+
+    try {
+      activityAnalytics("facebook_analytics_generated",
+        `Analytics for post generated`,
+        `${userId} has generated analytics for post ${postId} on facebook`, userId)
+    } catch (error) {
+      console.error("Error saving activity analytics:", error);
     }
 
     return res.status(200).json({
