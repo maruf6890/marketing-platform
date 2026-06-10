@@ -4,6 +4,7 @@ import userRoute from "./routes/userRoute.js"
 import facebookRoute from "./routes/facebookRoute.js";
 import instagramRoute from "./routes/instagramRoute.js";
 import postRoute from "./routes/postRoute.js";
+import "./scheduler.js";
 import {
   uploadSingleFile,
   uploadMultiple,
@@ -15,6 +16,7 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(express.json())
+
 app.use(
   cors({
     origin: "http://localhost:3000",
