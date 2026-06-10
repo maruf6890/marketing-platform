@@ -8,7 +8,8 @@ import "./scheduler.js";
 import {
   uploadSingleFile,
   uploadMultiple,
-  deleteSingle
+  deleteSingle,
+  getActivityAnalytics,
 } from "./controllers/utilsController.js";
 import { upload } from "./middleware/multer.js"
 import cors from 'cors'
@@ -31,6 +32,7 @@ app.use('/posts', postRoute)
 app.post("/upload", upload.single("file"), uploadSingleFile);
 app.post("/upload-multiple", upload.array("files", 10), uploadMultiple);
 app.delete("/media/:publicId", deleteSingle);
+app.get("/analytics", getActivityAnalytics);
 app.get("/", (req, res) => {
     res.send("Welcome to the User Authentication API")
 })
