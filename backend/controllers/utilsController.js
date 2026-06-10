@@ -102,18 +102,40 @@ export const deleteFiles = async (publicIds) => {
   }
 }
 
-export const activityAnalytics = async (type, title, description) => {
+export const activityAnalytics = async (type, title, description, userId) => {
   try {
     await pool.query(
       `
-    INSERT INTO activities (type, title, description)
-    VALUES (?, ?, ?)
+    INSERT INTO activities (type, title, description, user_id)
+    VALUES (?, ?, ?, ?)
     `,
-      [type, title, description],
+      [type, title, description, userId], 
     );
 
-    console.log("Activity analytucs saved:", type, title, description);
+    console.log("Activity analytucs saved:", type, title, description, userId);
   } catch (error) {
     console.error("Error saving activity analytucs:", error);
+  }
+}
+
+export const getActivityAnalytics = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const {activityTime, } = req.parms;
+
+    const findTypeSql = ``
+
+    return res.status(200).json({
+      data: rows,
+      message: "Activity analytics retrieved successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error getting activity analytics:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
   }
 }
