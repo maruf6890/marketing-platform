@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, MessageSquare } from "lucide-react";
+import { RefreshCw, MessageSquare, Loader2 } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -52,7 +52,6 @@ export default function InstagramFeedPage() {
             });
 
             if (response.success) {
-                toast.success("Instagram feed loaded successfully!");
                 setPosts(response.data);
             } else {
                 toast.error(response.message);
@@ -106,6 +105,10 @@ export default function InstagramFeedPage() {
         return date.toLocaleDateString() + " " + date.toLocaleTimeString();
     };
 
+    useEffect(() => {
+        fetchFeed();
+    }, [])
+
     return (
         <div className="space-y-6 p-6">
             {/* Header */}
@@ -121,9 +124,17 @@ export default function InstagramFeedPage() {
                     <RefreshCw
                         className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
                     />
-                    {loading ? "Loading..." : "Load Feed"}
+                    {loading ? "Loading..." : "Refresh Feed"}
                 </Button>
             </div>
+
+            {loading && (
+                <div className="flex items-center justify-center min-h-50 py-10">
+                    <h1 className="text-2xl font-bold text-muted-foreground flex items-center gap-4">
+                        <Loader2 className="size-8 animate-spin text-muted-foreground" /> Loading posts...
+                    </h1>
+                </div>
+            )}
 
             {/* Empty State */}
             {!loading && posts.length === 0 && (
@@ -167,21 +178,21 @@ export default function InstagramFeedPage() {
                                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                                         {(post.images && post.images.length > 0
                                             ? post.images : []).map((image, idx) => (
-                                            <div
-                                                key={`${post.id}-image-${idx}`}
-                                                className="relative w-full overflow-hidden rounded-md bg-muted"
-                                            >
-                                                <img
-                                                    src={image}
-                                                    alt={`Post image ${idx + 1}`}
-                                                    className="h-40 w-full object-cover sm:h-48"
-                                                    onError={(e) => {
-                                                        e.currentTarget.src =
-                                                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='%236b7280' text-anchor='middle' dy='.3em'%3EImage Error%3C/text%3E%3C/svg%3E";
-                                                    }}
-                                                />
-                                            </div>
-                                        ))}
+                                                <div
+                                                    key={`${post.id}-image-${idx}`}
+                                                    className="relative w-full overflow-hidden rounded-md bg-muted"
+                                                >
+                                                    <img
+                                                        src={image}
+                                                        alt={`Post image ${idx + 1}`}
+                                                        className="h-40 w-full object-cover sm:h-48"
+                                                        onError={(e) => {
+                                                            e.currentTarget.src =
+                                                                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23e5e7eb' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='%236b7280' text-anchor='middle' dy='.3em'%3EImage Error%3C/text%3E%3C/svg%3E";
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
                                     </div>
                                 </div>
                             )}

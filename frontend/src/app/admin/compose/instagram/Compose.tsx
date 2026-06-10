@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { DefaultSelect } from "@/components/app_inputs/DefaultSelect";
 import { Asset } from "../../platform/instagram_accounts/action";
 import { toast } from "sonner";
-import { CalendarClock, FileText, Loader2, Send } from "lucide-react";
+import { CalendarClock, FileText, Loader2, Send, Sparkles } from "lucide-react";
 import { ai_api_call } from "@/actions/ai_api_call";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -397,7 +397,7 @@ export default function IGPostComposer({ pages, initialPost }: InstagramPageProp
                   onClick={fetchAITags}
                   disabled={!message.trim() || aiLoading}
                 >
-                  {aiLoading ? "..." : "Generate"}
+                  {aiLoading ? <> <Loader2 className="animate-spin" /> Generating...</> : <><Sparkles className="h-4 w-4" /> Generate</>}
                 </Button>
               </div>
 
@@ -572,7 +572,7 @@ function ComposerCard({
         </div>
 
         <Button onClick={() => setOpen(true)}>
-          Generate Post
+          <Sparkles className="h-4 w-4" /> Generate Post
         </Button>
       </div>
 
