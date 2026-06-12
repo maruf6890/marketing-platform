@@ -226,13 +226,6 @@ export const createPost = async (req, res) => {
             },
           );
 
-          try {
-            activityAnalytics("post_published",
-              `A published post created`,
-              `${userId} has published post on facebook`, userId)
-          } catch (error) {
-            console.error("Error saving activity analytics:", error);
-          }
 
           console.log(
             "Facebook API response for single image post:",
@@ -276,6 +269,14 @@ export const createPost = async (req, res) => {
       `,
         [postId],
       );
+
+      try {
+        activityAnalytics("post_published",
+          `A published post created`,
+          `${userId} has published post on facebook`, userId)
+      } catch (error) {
+        console.error("Error saving activity analytics:", error);
+      }
       return res.status(200).json({
         message: "Post created and published successfully",
         success: true,
